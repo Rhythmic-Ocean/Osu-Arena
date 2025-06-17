@@ -1,0 +1,64 @@
+// Variables
+$primary-color: #007bff;
+$primary-hover-color: #0056b3;
+$secondary-color: #28a745;
+$secondary-hover-color: #218838;
+$background-color: wheat;
+$container-bg-color: #ffffff;
+$text-color: #333;
+$subtext-color: #666;
+
+// Styling
+body {
+    background-color: $background-color;
+    font: 'Franklin Gothic Medium', 'Areal Narrow', Arial, sans-serif; 
+    color: $text-color;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    text-align: center;
+}
+
+header{
+    width: 100%;
+    background-color: $background-color;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 20px 0;
+
+    h1{
+        margin: 0;
+        font-size: 2.5rm $text-color;
+    }
+}
+
+main{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    width: 100%;
+}
+
+.container{
+    background-color: $container-bg-color;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    max-width: 400px;
+    width: 100%;
+    margin: 50px auto;
+
+    h1{
+        font-size: 2.5 rem;
+        color: $text-color;
+        margin-bottom: 1.5rem;
+    }
+    p{
+        font-size: 18px;
+        color: $subtext-color ;
+        margin-bottom: 20px;
+    }
+
+}
