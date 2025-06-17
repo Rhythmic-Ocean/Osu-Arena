@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, redirect, session, url_for
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import create_engine, String, Column, Integer
 from dotenv import load_dotenv
 import os
 from osu import Client, AuthHandler, Scope
@@ -13,31 +12,74 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
 
-load_dotenv(dotenv_path="sec.env")
+env_path = os.path.join(os.path.dirname(__file__), 'sec.env')
+load_dotenv(dotenv_path=env_path)
+
 app.secret_key = os.getenv("FLASK_SECKEY")
 
 client_id = int(os.getenv("AUTH_ID"))
 client_secret = os.getenv("AUTH_TOKEN")
-redirect_url = "http://127.0.0.1:5000/"
-state1 = "Rhythmic_Ocean"
+redirect_url = "http://127.0.0.1:5000/" 
 
 auth = AuthHandler(client_id, client_secret, redirect_url, Scope.identify())
 
-class User(db.Model):
+class BaseUser(db.Model):
+    __abstract__ = True
     id = db.Column(db.Integer, primary_key = True)
-    discord_username = db.Column(db.String(25), unique = True, nullable = True)
-    osu_username = db.Column(db.String(25), unique = True, nullable = True)
+    rank = db.Column(db.Integer)
+    discord_username = db.Column(db.String(25), nullable = True)
+    osu_username = db.Column(db.String(25), nullable = True)
     initial_pp = db.Column(db.Integer, unique = True, nullable = True)
     final_pp = db.Column(db.Integer, nullable = True)
     pp_change = db.Column(db.Integer, nullable = True)
 
+
+class Master(BaseUser):
+    __tablename__ = 'Master'
+
+class Ranker(BaseUser):
+    __tablename__ = 'Ranker'
+
+class Elite(BaseUser):
+    __tablename__ = 'Elite'
+
+class Diamond(BaseUser):
+    __tablename__ = 'Diamond'
+
+class Platinum(BaseUser):
+    __tablename__ = 'Platinum'
+
+class Gold(BaseUser):
+    __tablename__ = 'Gold'
+
+class Silver(BaseUser):
+    __tablename__ = 'Silver'
+
+class Bronze(BaseUser):
+    __tablename__ = 'Bronze'
+
+LEAGUE_MODELS = {
+    1: Master,
+    2: Ranker,
+    3: Elite,
+    4: Diamond,
+    5: Platinum,
+    6: Gold,
+    7: Silver,
+    8: Bronze
+}
+
 @app.route("/")
 def route():
     state = request.args.get("state")
-    existing = User.query.filter_by(discord_username = state).first()
+    existing = search(state)
     if existing: 
-        uname = existing.osu_username
-        pp = existing.initial_pp
+        for entry in existing:
+            uname = entry['osu_username'] 
+            pp = entry['pp']
+            league = entry['league']
+        msg = "You already have a linked account, please contact spinneracc or Rhythmic_Ocean if you wanna link a different account or restart this session."
+        return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
     else:
         code = request.args.get("code")
         auth.get_auth_token(code)
@@ -46,10 +88,47 @@ def route():
         user = client.get_own_data(mode)
         uname = user.username
         pp = round(user.statistics.pp)
-        new_user = User(discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+        g_rank = user.statistics.global_rank
+        if g_rank >= 500000:
+            new_user = Bronze(rank = g_rank, discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            league = "Bronze"
+        elif g_rank >= 100000 and g_rank < 500000:
+            new_user = Silver(rank = g_rank, discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            league = "Silver"
+        elif g_rank >= 50000 and g_rank < 100000:
+            new_user = Gold(rank = g_rank, discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            league = "Gold"
+        elif g_rank >= 20000 and g_rank < 50000:
+            new_user = Platinum(rank = g_rank, discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None) 
+            league = "Platinum"
+        elif g_rank >= 10000 and g_rank < 20000:
+            new_user = Diamond(rank = g_rank, discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            league = "Diamond"
+        elif g_rank >= 5000 and g_rank < 10000:
+            new_user = Elite(rank = g_rank, discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            league = "Elite"
+        elif g_rank >= 1000 and g_rank < 5000:
+            new_user = Ranker(rank = g_rank, discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            league = "Ranker"
+        elif g_rank < 1000:
+            new_user = Master(rank = g_rank, discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            league = "Master"
         db.session.add(new_user)
         db.session.commit()
-    return render_template("dashboard.html", username = uname, pp = pp)
+        msg = "You have been verified, you can safely exit this page."
+        return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
+
+def search(username):
+    found=[]
+    for league_number, league_class in LEAGUE_MODELS.items():
+        data = league_class.query.filter_by(discord_username = username).first()
+        if data:
+            found.append({
+                "league": league_class.__tablename__,
+                "osu_username": data.osu_username,
+                "pp": data.initial_pp
+            })
+    return found
 
 if __name__ == "__main__":
     with app.app_context():
