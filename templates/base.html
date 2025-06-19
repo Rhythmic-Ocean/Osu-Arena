@@ -1,15 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-black text-pink-400 min-h-screen">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="{{ url_for('static', filename='race_to_4_digit_icon.jpg') }}" type="image/jpeg" />
     <title>RT4D</title>
-    <link rel="stylesheet" href="{{url_for('static', filename = "style.css")}}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='tailwind.min.css') }}">
 </head>
-<body>
-    <header>RT4D</header>
-    {% block body %}
-
-    {% endblock %}
+<body class="flex flex-col min-h-screen">
+    <main class="flex-grow container mx-auto px-4 py-8">
+        {% block body %}
+        {% endblock %}
+    </main>
 </body>
 </html>
