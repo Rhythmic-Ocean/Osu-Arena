@@ -40,6 +40,7 @@ LEAGUE_MODES = {
     7: "Ranker",
     8: "Master"
 }
+
 auth = AsynchronousAuthHandler(client_id, client_secret, redirect_url, Scope.identify())
 client_updater = AsynchronousClient.from_credentials(client_id, client_secret, redirect_url)
 
@@ -173,10 +174,15 @@ async def link(ctx):
     state = ctx.author.name
     auth_url = auth.get_auth_url() + f"&state={state}"
     embed = discord.Embed(
-        title = "Click Here",
-        url = auth_url
+    title="Link Your osu! Account",
+    description="Click the title to begin linking your account.",
+    color=discord.Color.blue(),
+    url=auth_url
     )
-    await ctx.send(embed = embed)
+    try:
+        await ctx.author.send(embed=embed)
+    except discord.Forbidden:
+        await ctx.send(f"{ctx.author.mention}, I couldn't DM you. Please enable DMs from server members.")
 
 bot.remove_command('help')
 
