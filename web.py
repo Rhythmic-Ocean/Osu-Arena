@@ -72,54 +72,74 @@ LEAGUE_MODELS = {
 
 @app.route("/")
 def route():
+    if "discord_username" in session:
+        username = session["discord_username"]
+        existing = search(username)
+        if existing: 
+            for entry in existing:
+                uname = entry['osu_username'] 
+                pp = entry['pp']
+                league = entry['league']
+            msg = "You already have a linked account, please contact spinneracc or Rhythmic_Ocean if you wanna link a different account or restart this session."
+            return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
     load = request.args.get("state")
-    data = serializer.loads(load)
-    state = data["discord_username"]
-    existing = search(state)
-    if existing: 
-        for entry in existing:
-            uname = entry['osu_username'] 
-            pp = entry['pp']
-            league = entry['league']
-        msg = "You already have a linked account, please contact spinneracc or Rhythmic_Ocean if you wanna link a different account or restart this session."
-        return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
-    else:
-        code = request.args.get("code")
-        auth.get_auth_token(code)
-        client = Client(auth)
-        mode = 'osu'
-        user = client.get_own_data(mode)
-        uname = user.username
-        pp = round(user.statistics.pp)
-        g_rank = user.statistics.global_rank
-        if g_rank >= 500000:
-            new_user = Bronze( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
-            league = "Bronze"
-        elif g_rank >= 100000 and g_rank < 500000:
-            new_user = Silver( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
-            league = "Silver"
-        elif g_rank >= 50000 and g_rank < 100000:
-            new_user = Gold( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
-            league = "Gold"
-        elif g_rank >= 20000 and g_rank < 50000:
-            new_user = Platinum( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0) 
-            league = "Platinum"
-        elif g_rank >= 10000 and g_rank < 20000:
-            new_user = Diamond( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
-            league = "Diamond"
-        elif g_rank >= 5000 and g_rank < 10000:
-            new_user = Elite( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
-            league = "Elite"
-        elif g_rank >= 1000 and g_rank < 5000:
-            new_user = Ranker( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
-            league = "Ranker"
-        elif g_rank < 1000:
-            new_user = Master( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
-            league = "Master"
-        db.session.add(new_user)
-        db.session.commit()
-        msg = "You have been verified, you can safely exit this page."
-        return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
+    code = request.args.get("code")
+    if load and code:
+        try:
+            data = serializer.loads(load)
+            state = data["discord_username"]
+        except Exception:
+            return "Invalid state, Please try again.",400
+        existing = search(state)
+        if existing: 
+            for entry in existing:
+                uname = entry['osu_username'] 
+                pp = entry['pp']
+                session["discord_username"] = state
+                league = entry['league']
+            msg = "You already have a linked account, please contact spinneracc or Rhythmic_Ocean if you wanna link a different account or restart this session."
+            return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
+        else:
+            auth.get_auth_token(code)
+            client = Client(auth)
+            mode = 'osu'
+            user = client.get_own_data(mode)
+            uname = user.username
+            pp = round(user.statistics.pp)
+            g_rank = user.statistics.global_rank
+
+
+            if g_rank >= 500000:
+                new_user = Bronze( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
+                league = "Bronze"
+            elif g_rank >= 100000 and g_rank < 500000:
+                new_user = Silver( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
+                league = "Silver"
+            elif g_rank >= 50000 and g_rank < 100000:
+                new_user = Gold( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
+                league = "Gold"
+            elif g_rank >= 20000 and g_rank < 50000:
+                new_user = Platinum( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0) 
+                league = "Platinum"
+            elif g_rank >= 10000 and g_rank < 20000:
+                new_user = Diamond( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
+                league = "Diamond"
+            elif g_rank >= 5000 and g_rank < 10000:
+                new_user = Elite( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
+                league = "Elite"
+            elif g_rank >= 1000 and g_rank < 5000:
+                new_user = Ranker( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
+                league = "Ranker"
+            elif g_rank < 1000:
+                new_user = Master( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
+                league = "Master"
+
+            db.session.add(new_user)
+            db.session.commit()
+            msg = "You have been verified, you can safely exit this page."
+            return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
+        
+    return render_template("welcome.html")
 
 def search(username):
     found=[]

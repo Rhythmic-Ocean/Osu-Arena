@@ -2,8 +2,6 @@
 
 {% block body %}
 
-
-
 <header class="bg-gradient-to-r from-pink-600 via-pink-500 to-pink-400 text-black shadow-lg rounded-b-2xl px-8 py-4 flex items-center justify-between">
     <div class="flex items-center gap-4">
         <img src="{{ url_for('static', filename='race_to_4_digit_icon.jpg') }}" alt="Logo" class="w-12 h-12 rounded-full object-cover shadow-md" />
@@ -13,9 +11,9 @@
         </div>
     </div>
     <div class="flex gap-2">
-        <a href="https://osu.ppy.sh/users/{{ username }}" target="_blank" rel="noopener noreferrer"
+        <a href="https://discord.gg/GBsNU5hCQy" target="_blank" rel="noopener noreferrer"
            class="bg-black text-pink-400 border border-pink-300 hover:bg-pink-700 hover:text-black transition-all duration-200 px-4 py-2 rounded-lg text-sm font-semibold shadow-md">
-            Your osu! profile
+            Join RT4D Discord
         </a>
         <a href="https://www.youtube.com/@Race_to_4Digit" target="_blank" rel="noopener noreferrer"
            class="bg-black text-pink-400 border border-pink-300 hover:bg-pink-700 hover:text-black transition-all duration-200 px-4 py-2 rounded-lg text-sm font-semibold shadow-md">
@@ -26,15 +24,20 @@
 
 <div class="bg-gradient-to-br from-black via-pink-900 to-pink-700 rounded-lg p-8 max-w-3xl mx-auto shadow-lg text-pink-100 mt-8">
     <h1 class="text-3xl font-bold mb-4">
-        Welcome, <span class="text-pink-300">{{ username }}</span>.
+        Welcome To <span class="text-pink-300">RT4D</span>.
     </h1>
     <p class="mb-2 text-lg">
-        Your initial <span class="font-mono bg-pink-800 px-2 rounded">{{ pp }}</span> pp for the current session is set.
+        Be part of the action! Join our 
+        <span class="font-mono bg-pink-800 px-2 rounded">
+            <a href="https://discord.gg/GBsNU5hCQy" target="_blank" rel="noopener noreferrer" class="underline hover:text-pink-200 transition">
+                official Discord server
+            </a>
+        </span> 
+        to connect with the community, get updates, and learn more.
     </p>
     <p class="mb-4 text-lg">
-        Your league is <span class="font-semibold text-pink-300">{{ league }}</span>.
+        See you <span class="font-semibold text-pink-300">there!!</span>.
     </p>
-    <p class="italic text-pink-200">{{ msg }}</p>
 </div>
 
 {% endblock %}
