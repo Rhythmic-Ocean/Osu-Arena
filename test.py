@@ -15,7 +15,7 @@ with sqlite3.connect("instance/rt4d.db") as conn:
         ('kero727','xXKero',3620),
         ('strivial','Strivial', 4359),         
         ('xavier_hi','SqueakSqueak',4159),
-
+        ('rhythmic_ocean','Rhythmic_Ocean',3066),
         ('alonsz','alonsz',4785),
         ('supneit','SupNeit',3122),
         ('beatmaps','Kqma',3070),
