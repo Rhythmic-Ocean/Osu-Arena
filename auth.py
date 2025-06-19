@@ -28,7 +28,7 @@ s_role = 'admin'
 
 client_id = int(os.getenv("AUTH_ID"))
 client_secret = os.getenv("AUTH_TOKEN")
-redirect_url = "http://127.0.0.1:5000/"
+redirect_url = "https://rhythmicocean.pythonanywhere.com/"
 
 LEAGUE_MODES = {
     1: "Bronze",
