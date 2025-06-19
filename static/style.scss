@@ -1,64 +1,52 @@
 // Variables
-$primary-color: #007bff;
-$primary-hover-color: #0056b3;
-$secondary-color: #28a745;
-$secondary-hover-color: #218838;
-$background-color: wheat;
-$container-bg-color: #ffffff;
-$text-color: #333;
-$subtext-color: #666;
+$primary-color: #3c40c6;
+$background-color: #f4f6f9;
+$font-color: #333;
+$card-background: #fff;
+$card-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+$border-radius: 12px;
+$spacing: 1.5rem;
 
-// Styling
+// Global styles
 body {
-    background-color: $background-color;
-    font: 'Franklin Gothic Medium', 'Areal Narrow', Arial, sans-serif; 
-    color: $text-color;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-    text-align: center;
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", Roboto, sans-serif;
+  background-color: $background-color;
+  color: $font-color;
 }
 
-header{
-    width: 100%;
-    background-color: $background-color;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    padding: 20px 0;
-
-    h1{
-        margin: 0;
-        font-size: 2.5rm $text-color;
-    }
+// Header bar
+header {
+  background-color: $primary-color;
+  color: white;
+  padding: $spacing;
+  font-size: 1.8rem;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-main{
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex: 1;
-    width: 100%;
+// Container for content
+.container {
+  max-width: 800px;
+  margin: 3rem auto;
+  background-color: $card-background;
+  padding: 2rem;
+  border-radius: $border-radius;
+  box-shadow: $card-shadow;
+  text-align: center;
+
+  h1 {
+    font-size: 1.5rem;
+    color: $primary-color;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: darken($font-color, 10%);
+  }
 }
 
-.container{
-    background-color: $container-bg-color;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    padding: 30px;
-    max-width: 400px;
-    width: 100%;
-    margin: 50px auto;
-
-    h1{
-        font-size: 2.5 rem;
-        color: $text-color;
-        margin-bottom: 1.5rem;
-    }
-    p{
-        font-size: 18px;
-        color: $subtext-color ;
-        margin-bottom: 20px;
-    }
-
-}

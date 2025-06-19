@@ -2,9 +2,8 @@ from dotenv import load_dotenv
 from osu import Client, AuthHandler, Scope, GameModeStr, AsynchronousClient, AsynchronousAuthHandler
 import os
 import discord
-# from discord import Member # Corrected potential import, but unused
 from discord.ext import commands
-from discord.ext.commands import has_role, MissingRole # Corrected has_permissions to has_role, and added MissingRole
+from discord.ext.commands import has_role, MissingRole 
 import logging
 import aiosqlite
 import shutil
@@ -25,7 +24,7 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 
 
 bot = commands.Bot(command_prefix = '!',intents = intents)
-s_role = 'admin' # Make sure 'admin' is the exact name of the role
+s_role = 'admin'
 
 client_id = int(os.getenv("AUTH_ID"))
 client_secret = os.getenv("AUTH_TOKEN")
@@ -67,11 +66,10 @@ async def update_current_pp(league):
         rows = await cursor.fetchall()
         updates = []
         for name, initial_pp in rows:
-            # Assuming get_user takes just the username string, not a tuple
-            user = await client_updater.get_user(name, GameModeStr.STANDARD) # Removed "@" prefix, assuming osu api handles it
+            user = await client_updater.get_user(name, GameModeStr.STANDARD)
             pp = round(user.statistics.pp)
             pp_change = int(pp) - int(initial_pp)
-            updates.append((pp, pp_change, name)) # Append as a tuple
+            updates.append((pp, pp_change, name))
         await cursor.executemany(
             f"UPDATE {league} SET current_pp = ?, pp_change = ? WHERE osu_username = ?",
             updates
@@ -79,18 +77,18 @@ async def update_current_pp(league):
         await conn.commit()
 
 async def update_init_pp(league):
-    async with aiosqlite.connect(DB_PATH) as conn: # Changed path to DB_PATH constant
+    async with aiosqlite.connect(DB_PATH) as conn:
         query = f"SELECT osu_username FROM {league}"
         cursor = await conn.cursor()
         await cursor.execute(query)
         rows = await cursor.fetchall()
         updates = []
-        for name_tuple in rows: # Renamed to name_tuple to clarify it's a tuple
-            name = name_tuple[0] # Extract the string username from the tuple
-            user = await client_updater.get_user(name, GameModeStr.STANDARD) # Removed "!" prefix
-            pp = round(user.statistics.pp) # Round PP to integer
-            pp_change = 0 # As it's initial update, pp_change should be 0
-            updates.append((pp, pp, pp_change, name)) # Append as a tuple
+        for name_tuple in rows: 
+            name = name_tuple[0] 
+            user = await client_updater.get_user(name, GameModeStr.STANDARD) 
+            pp = round(user.statistics.pp) 
+            pp_change = 0 
+            updates.append((pp, pp, pp_change, name)) 
         await cursor.executemany(
             f"UPDATE {league} SET initial_pp = ?, current_pp = ?, pp_change = ? WHERE osu_username = ?",
             updates
@@ -143,12 +141,10 @@ async def show(ctx, leag: str):
 @bot.command()
 @has_role(s_role)
 async def session_restart(ctx):
-    # Step 1: Backup the previous session
     loader = await ctx.send("⏳ Backing up previous session...")
     filename = backup_database()
     await loader.edit(content=f"✅ Previous session database backed up as **{filename}**")
 
-    # Step 2: Reinitialize all leagues
     leagues = [
         "Bronze", "Silver", "Gold", "Platinum",
         "Diamond", "Elite", "Ranker", "Master"
@@ -159,19 +155,15 @@ async def session_restart(ctx):
         await update_init_pp(league)
         await msg.edit(content=f"✅ Session successfully reinitiated for **{league} League**")
 
-    # Final confirmation
     await ctx.send("🎉 All leagues have been successfully reinitiated!")
     await ctx.send("🏆 Good luck to all players!")
 
 
-# --- ERROR HANDLER FOR session_restart ---
-@session_restart.error # THIS MUST BE AFTER THE COMMAND DEFINITION
+@session_restart.error 
 async def session_restart_error(ctx, error):
-    if isinstance(error, MissingRole): # Use MissingRole instead of commands.MissingRole
-        # Ensure 's_role' is a string of the role name, or the role ID
+    if isinstance(error, MissingRole):
         await ctx.send(f"Sorry {ctx.author.mention}, you don't have the required role (`{s_role}`) to use this command.")
     else:
-        # Log other errors for debugging
         print(f"An unhandled error occurred in session_restart: {error}")
         await ctx.send(f"An unexpected error occurred while running this command: `{error}`")
 
