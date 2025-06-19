@@ -8,6 +8,7 @@ import logging
 import aiosqlite
 import shutil
 import datetime
+from itsdangerous import URLSafeSerializer
 
 
 load_dotenv(dotenv_path="sec.env")
@@ -26,9 +27,11 @@ os.makedirs(BACKUP_DIR, exist_ok=True)
 bot = commands.Bot(command_prefix = '!',intents = intents)
 s_role = 'admin'
 
+SEC_KEY = os.getenv("SEC_KEY")
 client_id = int(os.getenv("AUTH_ID"))
 client_secret = os.getenv("AUTH_TOKEN")
 redirect_url = "https://rhythmicocean.pythonanywhere.com/"
+serializer = URLSafeSerializer(SEC_KEY)
 
 LEAGUE_MODES = {
     1: "Bronze",
@@ -171,11 +174,11 @@ async def session_restart_error(ctx, error):
 
 @bot.command()
 async def link(ctx):
-    state = ctx.author.name
+    state = serializer.dumps({"discord_username": ctx.author.name})
     auth_url = auth.get_auth_url() + f"&state={state}"
     embed = discord.Embed(
     title="Link Your osu! Account",
-    description="Click the title to begin linking your account.",
+    description="Click the title to begin linking your account. Please DO NOT share this link.",
     color=discord.Color.blue(),
     url=auth_url
     )

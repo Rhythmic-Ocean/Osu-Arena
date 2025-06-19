@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
 from osu import Client, AuthHandler, Scope
+from itsdangerous import URLSafeSerializer
 
 app = Flask(__name__)
 
@@ -16,12 +17,13 @@ env_path = os.path.join(os.path.dirname(__file__), 'sec.env')
 load_dotenv(dotenv_path=env_path)
 
 app.secret_key = os.getenv("FLASK_SECKEY")
-
+SEC_KEY = os.getenv("SEC_KEY")
 client_id = int(os.getenv("AUTH_ID"))
 client_secret = os.getenv("AUTH_TOKEN")
 redirect_url = "https://rhythmicocean.pythonanywhere.com/" 
-
+serializer = URLSafeSerializer(SEC_KEY)
 auth = AuthHandler(client_id, client_secret, redirect_url, Scope.identify())
+
 
 class BaseUser(db.Model):
     __abstract__ = True
@@ -70,7 +72,9 @@ LEAGUE_MODELS = {
 
 @app.route("/")
 def route():
-    state = request.args.get("state")
+    load = request.args.get("state")
+    data = serializer.loads(load)
+    state = data["discord_username"]
     existing = search(state)
     if existing: 
         for entry in existing:

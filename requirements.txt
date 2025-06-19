@@ -4,3 +4,4 @@ discord.py>=2.5.2
 aiosqlite>=0.21.0
 flask>=3.1.0
 flask_sqlalchemy>=3.1.1
+itsdangerous>=2.2.0
