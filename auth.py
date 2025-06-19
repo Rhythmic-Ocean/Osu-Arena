@@ -1,10 +1,12 @@
 from dotenv import load_dotenv
-from osu import Client, AuthHandler, Scope
-import sqlite3
+from osu import Client, AuthHandler, Scope, GameModeStr, AsynchronousClient, AsynchronousAuthHandler
 import os
 import discord
 from discord.ext import commands
 import logging
+import aiosqlite
+import shutil
+import datetime
 
 
 load_dotenv(dotenv_path="sec.env")
@@ -33,29 +35,69 @@ LEAGUE_MODES = {
     7: "Ranker",
     8: "Master"
 }
-auth = AuthHandler(client_id, client_secret, redirect_url, Scope.identify())
+auth = AsynchronousAuthHandler(client_id, client_secret, redirect_url, Scope.identify())
+client_updater = AsynchronousClient.from_credentials(client_id, client_secret, redirect_url)
 
-def get_table_data(league):
-    conn = sqlite3.connect("instance/rt4d.db")  # change path to your DB
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM {league}")  # change table name
-    rows = cursor.fetchall()
-    headers = [description[0] for description in cursor.description]
-    conn.close()
+
+async def get_table_data(league):
+    async with aiosqlite.connect("instance/rt4d.db") as conn:  
+        cursor = await conn.cursor()
+        await cursor.execute(f"SELECT osu_username, initial_pp, current_pp, pp_change FROM {league} ORDER BY pp_change DESC")  
+        rows = await cursor.fetchall()
+        headers = [description[0] for description in cursor.description]
     return headers, rows
+
+async def update_current_pp(league):
+    async with aiosqlite.connect("instance/rt4d.db") as conn:
+        query = f"SELECT osu_username, initial_pp FROM {league}"
+        cursor = await conn.cursor()
+        await cursor.execute(query)
+        rows = await cursor.fetchall()
+        updates = []
+        for name, initial_pp in rows:
+            user = await client_updater.get_user(f"@{name}", GameModeStr.STANDARD)
+            pp = round(user.statistics.pp)
+            pp_change = int(pp) - int(initial_pp)
+            updates.append((pp,pp_change,name))
+        await cursor.executemany(
+            f"UPDATE {league} SET current_pp = ?, pp_change = ? WHERE osu_username = ?",
+            updates
+        )
+        await conn.commit()
+    
+async def update_init_pp(league):
+    async with aiosqlite.connect("instance/rt4d.db") as conn:
+        query = f"SELECT osu_username FROM {league}"
+        cursor = await conn.cursor()
+        await cursor.execute(query)
+        rows = await cursor.fetchall()
+        updates = []
+        for name in rows:
+            user = await client_updater.get_user(f"!{name}", GameModeStr.STANDARD)
+            pp = user.statistics.pp
+            pp_change = 0
+            updates.append(pp,pp,pp_change,name)
+        await cursor.executemany(
+            f"UPDATE {league} SET initial_pp = ?, current_pp = ?, pp_change = ? WHERE osu_username = ?", 
+            updates
+        )
+        await conn.commit()
+
 
 @bot.event
 async def on_ready():
     print(f"We are ready to go in, {bot.user.name}")
 
 @bot.command()
+@commands.cooldown(1,20, commands.BucketType.user)
 async def show(ctx, league: str):
     lea = league
     if lea not in LEAGUE_MODES.values():
         await ctx.send("Invalid league name. Use one of: " + ", ".join(LEAGUE_MODES.values()))
         return
-
-    headers, rows = get_table_data(f"{lea}")
+    loading_message = await ctx.send(f"⏳ Loading data of {lea} league, please wait...")
+    await update_current_pp(lea)
+    headers, rows = await get_table_data(f"{lea}")
     if not rows:
         await ctx.send("This table is empty")
         return
@@ -72,12 +114,15 @@ async def show(ctx, league: str):
     formatted += "-+-".join("-" * w for w in col_widths) + "\n"
     for row in rows:
         formatted += format_row(row) + "\n"
+        await loading_message.edit(content = f"```\n{formatted}\n```")
 
-    if len(formatted) > 1990:
-        await ctx.send("Too much data to display.")
+@show.error
+async def show_error(ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+        retry_after = error.retry_after
+        await ctx.send(f"You are on cooldown! Try again in {retry_after:.2f} seconds.")
     else:
-        await ctx.send(f"```\n{formatted}\n```")
-
+        raise error
 
 @bot.command()
 async def link(ctx):

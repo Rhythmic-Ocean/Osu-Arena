@@ -29,7 +29,7 @@ class BaseUser(db.Model):
     discord_username = db.Column(db.String(25), nullable = True)
     osu_username = db.Column(db.String(25), nullable = True)
     initial_pp = db.Column(db.Integer, unique = True, nullable = True)
-    final_pp = db.Column(db.Integer, nullable = True)
+    current_pp = db.Column(db.Integer, nullable = True)
     pp_change = db.Column(db.Integer, nullable = True)
 
 
@@ -89,28 +89,28 @@ def route():
         pp = round(user.statistics.pp)
         g_rank = user.statistics.global_rank
         if g_rank >= 500000:
-            new_user = Bronze( discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            new_user = Bronze( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
             league = "Bronze"
         elif g_rank >= 100000 and g_rank < 500000:
-            new_user = Silver( discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            new_user = Silver( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
             league = "Silver"
         elif g_rank >= 50000 and g_rank < 100000:
-            new_user = Gold( discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            new_user = Gold( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
             league = "Gold"
         elif g_rank >= 20000 and g_rank < 50000:
-            new_user = Platinum( discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None) 
+            new_user = Platinum( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0) 
             league = "Platinum"
         elif g_rank >= 10000 and g_rank < 20000:
-            new_user = Diamond( discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            new_user = Diamond( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
             league = "Diamond"
         elif g_rank >= 5000 and g_rank < 10000:
-            new_user = Elite( discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            new_user = Elite( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
             league = "Elite"
         elif g_rank >= 1000 and g_rank < 5000:
-            new_user = Ranker( discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            new_user = Ranker( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
             league = "Ranker"
         elif g_rank < 1000:
-            new_user = Master( discord_username = state, osu_username = uname, initial_pp = pp, final_pp = None, pp_change = None)
+            new_user = Master( discord_username = state, osu_username = uname, initial_pp = pp, current_pp = pp, pp_change = 0)
             league = "Master"
         db.session.add(new_user)
         db.session.commit()
