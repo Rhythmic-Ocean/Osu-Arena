@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 import os
 from osu import Client, AuthHandler, Scope
+from datetime import datetime, timezone
 from itsdangerous import URLSafeSerializer
 
 app = Flask(__name__)
@@ -30,10 +31,26 @@ class BaseUser(db.Model):
     id = db.Column(db.Integer, primary_key = True)
     discord_username = db.Column(db.String(25), nullable = True)
     osu_username = db.Column(db.String(25), nullable = True)
-    initial_pp = db.Column(db.Integer, unique = True, nullable = True)
+    initial_pp = db.Column(db.Integer, nullable = True)
     current_pp = db.Column(db.Integer, nullable = True)
     pp_change = db.Column(db.Integer, nullable = True)
 
+class Rivals(db.Model):
+    __tablename__ = 'Rivals'
+    id = db.Column(db.Integer, unique = True, primary_key = True)
+    league = db.Column(db.String(25), nullable = False)
+    challenger = db.Column(db.String(25), nullable = False)
+    challenged = db.Column(db.String(25),nullable = False)
+    challenger_initial_pp = db.Column(db.Integer, nullable = True)
+    challenger_final_pp= db.Column(db.Integer, nullable = True)
+    challenged_initial_pp = db.Column(db.Integer, nullable = True)
+    challenged_final_pp = db.Column(db.Integer, nullable = True)
+    challenger_stats = db.Column(db.String(25), nullable = True)
+    challenged_stats = db.Column(db.String(25), nullable = True)
+    issued_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    challenge_status = db.Column(db.String(25))
+    for_pp = db.Column(db.Integer)
+    
 
 class Master(BaseUser):
     __tablename__ = 'Master'
