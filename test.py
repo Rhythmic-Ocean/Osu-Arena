@@ -95,6 +95,78 @@ rivals_update = [
 ('Silver', 'Rika Voort', 'Rhythmic_Ocean', 3687,3700, now, "Unfinished", 750)
 ]
 
+all_updates = [
+    # Bronze
+    ('richard_riderr', 'Slowpoke1360'),
+    ('taichi1717', 'Solar_Taichi'),
+    ('ilovewalterwhite', 'NotPole'),
+
+    # Silver
+    ('yanamiannapout', 'Rika Voort'),
+    ('evolhsif', 'shira1'),
+    ('rafelandroid2', 'castor'),
+    ('kero727', 'xXKero'),
+    ('strivial', 'Strivial'),
+    ('xavier_hi', 'SqueakSqueak'),
+    ('rhythmic_ocean', 'Rhythmic_Ocean'),
+    ('alonsz', 'alonsz'),
+    ('supneit', 'SupNeit'),
+    ('beatmaps', 'Kqma'),
+    ('booba.b', 'jefferson bobbe'),
+    ('ssssoup', 'spinneracc'),
+    ('amamiya.mitoro', 'Amamiya Mitoro'),
+    ('pathetic_and_sad', 'somebody_home'),
+
+    # Gold (flipped)
+    ('rz15i', 'rzye'),
+    ('eonduolatias', 'EonDuoLatios'),
+    ('johnyy4', '6 digit forever'),
+    ('daribush.', 'Daribush'),
+    ('egorixxz', 'Egorixxz'),
+    ('thatg_y', 'thatanimeguy0'),
+    ('goi3m', 'golem'),
+    ('imtwilk', 'Stagz'),
+    ('death9208', 'Death9208'),
+    ('xapped', 'Xapped'),
+
+    # Platinum (flipped)
+    ('akasaiba', 'Saiba'),
+    ('catzfx', 'plus'),
+    ('oppanboy', 'oppanboy'),
+    ('arirret', 'Arirret'),
+    ('oshmkufa_', 'Yumirai'),
+    ('demideum', 'Demideum'),
+    ('a_cool_toast', 'FinBois'),
+    ('serrrved', 'zeppelinn'),
+    ('vnxt.', 'durante'),
+    ('kanna.dc', '[Kanna]'),
+    ('elo4373', 'Elo4373'),
+    ('wetratz0', 'wetratz0'),
+
+    # Diamond (flipped)
+    ('wutever', 'Wutever'),
+    ('mrcursed', 'DZHEYLO'),
+    ('nunk7', 'nunk7'),
+    ('zacfrfr', 'zacfr'),
+    ('inklyned', 'InkLyned'),
+    ('am1x', 'Am1x'),
+    ('johwn', '- mimic -'),
+
+    # Elite (flipped)
+    ('rosedive', 'rockhard'),
+    ('sillierkel', 'Floofies'),
+    ('bowiepro', 'bowiepro'),
+
+    # Master (flipped)
+    ('onlyhadley', 'OnlyHadley'),
+    ('boybeef', 'EthantrixV3'),
+    ('miinr', 'miinr'),
+]
+
+cursor.executemany(
+    f"INSERT INTO discord_osu (discord_username, osu_username) VALUES (?, ?)", all_updates
+)
+
 cursor.executemany(
     f"INSERT INTO Bronze (discord_username, osu_username, initial_pp) VALUES (?,?,?)", bronze_update
 )

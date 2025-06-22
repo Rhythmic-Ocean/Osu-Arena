@@ -130,8 +130,8 @@ async def get_table_data(league):
         headers = [description[0] for description in cursor.description]
     return headers, rows
 
-async def get_osu_uname(discord_uname, league):
-    query = f"SELECT osu_username FROM {league} WHERE discord_username = ?"
+async def get_osu_uname(discord_uname, league = None):
+    query = f"SELECT osu_username FROM discord_osu WHERE discord_username = ?"
     async with aiosqlite.connect(DB_PATH) as conn:
         cursor = await conn.cursor()
         await cursor.execute(query,(discord_uname,))
@@ -205,20 +205,20 @@ async def check_challenger_challenges(challenger):
 
 async def challenge_accepted(id):
     async with aiosqlite.connect(DB_PATH) as conn:
-        query_v1 = "SELECT challenger, challenged FROM Rivals WHERE id = ?"
+        query_v1 = "SELECT challenger, challenged FROM Rivals WHERE id = ? AND challenge_status = ?"
         query_v2 = """
             UPDATE Rivals
             SET challenger_initial_pp = ?, challenger_final_pp = ?,
                 challenged_initial_pp = ?, challenged_final_pp = ?,
                 challenger_stats = ?, challenged_stats = ?, challenge_status = ?
-            WHERE id = ?
+            WHERE id = ? 
         """
         cursor = await conn.cursor()
-        await cursor.execute(query_v1, (id,))
+        await cursor.execute(query_v1, (id, CHALLENGE_STATUS[1]))
         result_v1 = await cursor.fetchone()
 
-        if not result_v1:
-            return 
+        if result_v1 is None:
+            return None
 
         challenger_uname, challenged_uname = result_v1
         challenger_pp = await get_pp(osu_username=challenger_uname)
@@ -233,6 +233,7 @@ async def challenge_accepted(id):
             )
         )
         await conn.commit()
+        return True
 
 
 async def challenge_allowed(challenger, challenged, league):
@@ -262,7 +263,6 @@ async def challenge_allowed(challenger, challenged, league):
         issued_at = datetime.strptime(issued_at_str, "%Y-%m-%d %H:%M:%S")
         if datetime.now(timezone.utc) - issued_at < timedelta(hours=24):
             return 4
-
     return 1  
 
 
@@ -347,30 +347,50 @@ async def log_rivals(league, challenger, challenged, pp):
         return cursor.lastrowid
     
 async def challenge_declined(id):
-    query = "UPDATE Rivals SET challenge_status = ? WHERE id = ?"
+    query = "UPDATE Rivals SET challenge_status = ? WHERE id = ? AND challenge_status = ?"
     async with aiosqlite.connect(DB_PATH) as conn:
         cursor = await conn.cursor()
-        await cursor.execute(query,(CHALLENGE_STATUS[2], id))
+        await cursor.execute(query,(CHALLENGE_STATUS[2], id, CHALLENGE_STATUS[1]))
         await conn.commit()
+        if cursor.rowcount == 0:
+            return None
+        return True
 
 async def check_pending(challenger, challenged):
-    query = "SELECT id, challenge_status FROM Rivals WHERE challenger = ?, challenged = ? ORDER BY issued_at DESC"
+    query = "SELECT id, challenge_status FROM Rivals WHERE challenger = ? AND challenged = ? ORDER BY issued_at DESC"
     async with aiosqlite.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        await cursor.execute(query,(challenger, challenged))
-        result = cursor.fetchall()
+        cursor = await conn.cursor()
+        await cursor.execute(query,(await get_osu_uname(challenger), await get_osu_uname(challenged)))
+        result = await cursor.fetchall()
         for id, challenge_status in result:
             if challenge_status == CHALLENGE_STATUS[1]:
                 return id
         return None
     
-async def revoke_challenge(id):
+async def revoke_success(id):
     query = "DELETE FROM Rivals WHERE id = ?"
     async with aiosqlite.connect(DB_PATH) as conn:
-        cursor = conn.cursor()
-        await cursor.execute(query,(id))
+        cursor = await conn.cursor()
+        await cursor.execute(query,(id,))
+        await conn.commit()
+
+async def store_msg_id(challenge_id, msg_id):
+    query = "INSERT INTO mesg_id (msg_id, challenge_id) VALUES (?, ?)"
+    async with aiosqlite.connect(DB_PATH) as conn:
+        cursor = await conn.cursor()
+        await cursor.execute(query,(msg_id, challenge_id))
         await conn.commit()
             
+async def get_msg_id(challenge_id):
+    query = "SELECT msg_id FROM mesg_id WHERE challenge_id = ?"
+    query_v2 = "DELETE FROM mesg_id WHERE challenge_id = ?"
+    async with aiosqlite.connect(DB_PATH) as conn:
+        cursor = await conn.cursor()
+        await cursor.execute(query, (challenge_id,))
+        result = await cursor.fetchone()
+        await cursor.execute(query_v2, (challenge_id,))
+        await conn.commit()
+        return result[0] if result else None
             
         
 

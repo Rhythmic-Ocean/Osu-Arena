@@ -51,6 +51,18 @@ class Rivals(db.Model):
     challenge_status = db.Column(db.String(25))
     for_pp = db.Column(db.Integer)
     
+class discord_osu(db.Model):
+    __tablename__ = 'discord_osu'
+    id = db.Column(db.Integer, unique = True, primary_key = True)
+    discord_username = db.Column(db.String(25), nullable = True)
+    osu_username = db.Column(db.String(25), nullable = True)
+
+class mesg_id(db.Model):
+    __tablename__ = 'mesg_id'
+    id = db.Column(db.Integer, unique = True, primary_key = True)
+    msg_id = db.Column(db.Integer, unique = True)
+    challenge_id = db.Column(db.Integer, unique = True)
+
 
 class Master(BaseUser):
     __tablename__ = 'Master'
