@@ -21,8 +21,8 @@ intents.members = True
 
 DB_PATH = "instance/rt4d.db"
 BACKUP_DIR = "instance/backups"
-RIVAL_RESULTS_ID = 1386091184706818220
-#1378928704121737326
+RIVAL_RESULTS_ID = 1378928704121737326 #1386091184706818220
+
 
 os.makedirs(BACKUP_DIR, exist_ok=True)
 
@@ -353,6 +353,25 @@ async def challenge_declined(id):
         await cursor.execute(query,(CHALLENGE_STATUS[2], id))
         await conn.commit()
 
+async def check_pending(challenger, challenged):
+    query = "SELECT id, challenge_status FROM Rivals WHERE challenger = ?, challenged = ? ORDER BY issued_at DESC"
+    async with aiosqlite.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        await cursor.execute(query,(challenger, challenged))
+        result = cursor.fetchall()
+        for id, challenge_status in result:
+            if challenge_status == CHALLENGE_STATUS[1]:
+                return id
+        return None
+    
+async def revoke_challenge(id):
+    query = "DELETE FROM Rivals WHERE id = ?"
+    async with aiosqlite.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        await cursor.execute(query,(id))
+        await conn.commit()
+            
+            
         
 
 
