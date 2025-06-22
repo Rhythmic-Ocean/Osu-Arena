@@ -38,7 +38,6 @@ silver_update = [
     ('supneit','SupNeit',3122),
     ('beatmaps','Kqma',3070),
     ('booba.b','jefferson bobbe',4403),
-    ('ssssoup', 'spinneracc', 4863),
     ('amamiya.mitoro','Amamiya Mitoro',4453),
     ('pathetic_and_sad', 'somebody_home', 0)
 ]
@@ -51,6 +50,7 @@ gold_update = [
     ('thatanimeguy0', 'thatg_y', 4852),
     ('golem', 'goi3m',5917),
     ('Stagz','imtwilk',5878),
+    ('ssssoup', 'spinneracc', 4863),
     ('Death9208','death9208',5566),
     ('Xapped','xapped',4400),
 ]
