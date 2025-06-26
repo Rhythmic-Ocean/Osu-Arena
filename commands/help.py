@@ -12,7 +12,7 @@ async def help(ctx):
     )
 
     embed.add_field(
-        name="🔗 !link*(currently inactive)*",
+        name="🔗 !link",
         value="Link your osu! account.\n"
               "All users signed up before **June 18, 2025, 22:50 CDT** were linked manually.",
         inline=False
