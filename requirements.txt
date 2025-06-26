@@ -8,3 +8,5 @@ itsdangerous>=2.2.0
 supabase>=2.15.3
 pandas>=2.2.3
 pytz>=25.1
+aiofiles>=24.1.0
+python-dateutil>=2.9.0.post0

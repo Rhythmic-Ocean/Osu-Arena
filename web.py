@@ -18,7 +18,7 @@ app.secret_key = os.getenv("FLASK_SECKEY")
 SEC_KEY = os.getenv("SEC_KEY")
 client_id = int(os.getenv("AUTH_ID"))
 client_secret = os.getenv("AUTH_TOKEN")
-redirect_url = "http://127.0.0.1:5000/" 
+redirect_url = "https://rhythmicocean.pythonanywhere.com/" 
 serializer = URLSafeSerializer(SEC_KEY)
 auth = AuthHandler(client_id, client_secret, redirect_url, Scope.identify())
 

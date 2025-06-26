@@ -24,7 +24,7 @@ intents.members = True
 
 DB_PATH = "instance/rt4d.db"
 BACKUP_DIR = "instance/backups"
-RIVAL_RESULTS_ID = 1386091184706818220 #1378928704121737326 
+RIVAL_RESULTS_ID =  1378928704121737326 #1386091184706818220
 
 
 os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -42,7 +42,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 
 
-redirect_url = "http://127.0.0.1:5000/"
+redirect_url = "https://rhythmicocean.pythonanywhere.com/s"
 serializer = URLSafeSerializer(SEC_KEY)
 
 auth = AsynchronousAuthHandler(client_id, client_secret, redirect_url, Scope.identify())
