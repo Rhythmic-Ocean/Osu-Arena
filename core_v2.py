@@ -22,12 +22,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-DB_PATH = "instance/rt4d.db"
-BACKUP_DIR = "instance/backups"
 RIVAL_RESULTS_ID =  1378928704121737326 #1386091184706818220
-
-
-os.makedirs(BACKUP_DIR, exist_ok=True)
 
 logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
 
@@ -42,7 +37,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 
 
-redirect_url = "https://rhythmicocean.pythonanywhere.com/s"
+redirect_url = "https://rhythmicocean.pythonanywhere.com/"
 serializer = URLSafeSerializer(SEC_KEY)
 
 auth = AsynchronousAuthHandler(client_id, client_secret, redirect_url, Scope.identify())
