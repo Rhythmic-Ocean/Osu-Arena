@@ -1,4 +1,4 @@
-from core import bot
+from core_v2 import bot
 import discord
 
 bot.remove_command('help')

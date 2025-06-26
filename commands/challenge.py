@@ -1,4 +1,4 @@
-from core import bot, ROLE_MODES, ChallengeView, check_challenger_challenges, challenge_accepted,get_pp, RIVAL_RESULTS_ID, challenge_allowed, log_rivals, challenge_declined, store_msg_id
+from core_v2 import bot, ROLE_MODES, ChallengeView, check_challenger_challenges, challenge_accepted,get_pp, RIVAL_RESULTS_ID, challenge_allowed, log_rivals, challenge_declined, store_msg_id, check_league, revoke_success
 import discord
 from discord.ext import commands
 
@@ -19,10 +19,10 @@ async def challenge(ctx, player: discord.Member, pp: int):
     try:
         number_of_challenges = await check_challenger_challenges(challenger)
     except Exception as e:
-        await ctx.send(f"Error 1: {e}")
+        await ctx.send(f"Error 1 at challenge command: {e}")
 
     if number_of_challenges >= 3:
-        await ctx.send(f"{challenger.mention}, you already have 3 ongoing/ pending challenges. Complete them before issuing more.")
+        await ctx.send(f"{challenger.mention}, you already have 3 ongoing/ pending challenges. Complete or revoke any pending challenges before issuing more.")
         return
 
     challenger_role = None
@@ -47,12 +47,18 @@ async def challenge(ctx, player: discord.Member, pp: int):
         await ctx.send(f"{challenger.mention}, challenge failed. Please choose someone from your own league.")
         return
     league = challenger_role
+    bool1 = await check_league(challenger.name, league)
+    bool2 = await check_league(player.name, league)
 
-
-
+    if not bool1:
+        await ctx.send(f"{challenger.mention}, your role and database league are mismatched, please ask the admins to fix it. You won't be able to challenge or receive challenge until then.")
+        if not bool2:
+            await ctx.send(f"{player.mention}, your role and database league are mismatched, please ask admins to fix it. You won't be able to challenge or receive challenge until then.")
+        return
 
     try:
         allowance = await challenge_allowed(challenger.name, player.name, league)
+        print(allowance)
     except Exception as e:
         await ctx.send(f"Error 2: {e}")
     if allowance == 2:
@@ -67,6 +73,8 @@ async def challenge(ctx, player: discord.Member, pp: int):
     elif allowance == 5:
         await ctx.send(f"{challenger.mention}, you or {player.mention} don't have your account linked to the database yet. Please contact me if you think it's a mistake.")
         return
+    elif allowance == 6:
+        await ctx.send(f"{challenger.mention}, ERROR: Failed to execute function 'challenged_allowed'. Challenge failed.")
     try:
         challenge_id = await log_rivals(league, challenger.name, player.name, pp)
     except Exception as e:
@@ -87,15 +95,14 @@ async def challenge(ctx, player: discord.Member, pp: int):
             view=view
         )
     except discord.Forbidden:
-        await ctx.send(f"Challenge unsuccessful. {player.mention} may have DMs disabled. Challenge logged as voided.")
+        await ctx.send(f"Challenge unsuccessful. {player.mention} may have DMs disabled. Challenge has been revoked.")
         try:
-                await challenge_declined(challenge_id)
+                await revoke_success(challenge_id)
                 return  
         except Exception as e:
-            await ctx.send(f"{challenger.mention}, failed to log decline: `{e}`")
+            await ctx.send(f"ERROR: failed to log revokes: `{e}`")
             return
         
-
     if rival_results_channel:
         try:
 
@@ -109,10 +116,11 @@ async def challenge(ctx, player: discord.Member, pp: int):
     except Exception as e:
         await ctx.send(f"Waiting error:{e}")
         return 
-    
-    challenger_pp = await get_pp(discord_username = challenger.name, league=league)
-    challenged_pp = await get_pp(discord_username= player.name, league=league)
-
+    try:
+        challenger_pp = await get_pp(discord_username = challenger.name,)
+        challenged_pp = await get_pp(discord_username= player.name)
+    except Exception as e:
+        print(f"Error getting pp: {e}")
     if view.response is None:
         await ctx.send(f"{challenger.mention}, {player.mention} did not respond in time. The challenge is voided.")
         try:
@@ -120,7 +128,7 @@ async def challenge(ctx, player: discord.Member, pp: int):
             if stats is None:
                 await player.send("The challenge above is no longer available. Any interaction with it might fail.")
                 return
-            await challenge_request.edit(content = f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp})|{pp}PP|Declined")
+            await challenge_request.edit(content = f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) |{pp}PP| Declined")
         except Exception as e:
             await ctx.send(f"{challenger.mention}Error at challenge_decline function, please report. Error: {e}")
             return

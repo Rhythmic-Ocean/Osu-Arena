@@ -1,4 +1,4 @@
-from core import backup_database, update_init_pp,bot, s_role
+from core_v2 import backup_database ,bot, s_role
 from discord.ext import commands
 from discord.ext.commands import has_role, MissingRole
 

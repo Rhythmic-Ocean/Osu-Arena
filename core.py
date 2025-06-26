@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, timezone
 from itsdangerous import URLSafeSerializer
 from discord.ui import View, Button
 import sqlite3
+from supabase import Client, create_client
 
 load_dotenv(dotenv_path="sec.env")
 token = os.getenv('DISCORD_TOKEN')
@@ -33,12 +34,17 @@ s_role = 'admin'
 SEC_KEY = os.getenv("SEC_KEY")
 client_id = int(os.getenv("AUTH_ID"))
 client_secret = os.getenv("AUTH_TOKEN")
-redirect_url = "https://rhythmicocean.pythonanywhere.com/"
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+
+
+redirect_url = "http://127.0.0.1:5000/"
 serializer = URLSafeSerializer(SEC_KEY)
 
 auth = AsynchronousAuthHandler(client_id, client_secret, redirect_url, Scope.identify())
 client_updater = AsynchronousClient.from_credentials(client_id, client_secret, redirect_url)
-
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 LEAGUE_MODES = {
     1: "Bronze",

@@ -1,4 +1,4 @@
-from core import bot,get_table_data,update_current_pp, TABLE_MODES, update_rival_table, show_rival_table
+from core_v2 import get_table_data, TABLE_MODES, bot
 from discord.ext import commands
 
 @bot.command()
@@ -12,15 +12,11 @@ async def show(ctx, leag: str):
 
     loading_message = await ctx.send(f"⏳ Loading data for **{league}** league, please wait...")
 
-
-    if league == "Rivals":
-         await update_rival_table()
-         rows, headers = await show_rival_table()
-
-    else:
-        await update_current_pp(league)
-
-        headers, rows = await get_table_data(league)
+    try:
+        headers, rows = await get_table_data(league.lower())
+    except Exception as e:
+        print(f"error: {e}")
+        return
 
     if not rows:
         await loading_message.edit(content="⚠️ This table is empty.")

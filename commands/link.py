@@ -1,4 +1,4 @@
-from core import serializer, auth, bot
+from core_v2 import serializer, auth, bot
 import discord
 
 @bot.command()

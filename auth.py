@@ -1,4 +1,4 @@
-from core import token, handler, bot
+from core_v2 import token, handler, bot
 import logging
 import commands 
 
