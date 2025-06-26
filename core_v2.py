@@ -37,7 +37,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 
 
-redirect_url = "https://rhythmicocean.pythonanywhere.com/"
+redirect_url = "https://rt4d.com/"
 serializer = URLSafeSerializer(SEC_KEY)
 
 auth = AsynchronousAuthHandler(client_id, client_secret, redirect_url, Scope.identify())

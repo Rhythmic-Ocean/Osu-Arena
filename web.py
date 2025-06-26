@@ -18,7 +18,7 @@ app.secret_key = os.getenv("FLASK_SECKEY")
 SEC_KEY = os.getenv("SEC_KEY")
 client_id = int(os.getenv("AUTH_ID"))
 client_secret = os.getenv("AUTH_TOKEN")
-redirect_url = "https://rhythmicocean.pythonanywhere.com/" 
+redirect_url = "https://rt4d.com/" 
 serializer = URLSafeSerializer(SEC_KEY)
 auth = AuthHandler(client_id, client_secret, redirect_url, Scope.identify())
 
@@ -93,4 +93,5 @@ def route():
     return render_template("welcome.html")
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8000))
+    app.run(host="0.0.0.0", port=port)
