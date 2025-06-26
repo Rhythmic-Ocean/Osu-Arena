@@ -42,7 +42,7 @@ def route():
         entry=  search(username)
         if entry: 
             uname = entry['osu_username'] 
-            pp = entry['current_pp']
+            pp = entry['initial_pp']
             league = entry['league']
             msg = "You already have a linked account, please contact spinneracc or Rhythmic_Ocean if you wanna link a different account or restart this session."
             return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
@@ -65,7 +65,7 @@ def route():
         entry =  search(state)
         if entry: 
             uname = entry['osu_username'] 
-            pp = entry['current_pp']
+            pp = entry['initial_pp']
             session["discord_username"] = state
             league = entry['league']
             msg = "You already have a linked account, please contact spinneracc or Rhythmic_Ocean if you wanna link a different account or restart this session."

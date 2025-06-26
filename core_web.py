@@ -18,8 +18,11 @@ def search(username: str) -> dict | None:
         logging.error(f"{username} is not a valid username")
         return None
     try:
-        response = supabase.table("discord_osu").select("osu_username, current_pp, league").eq("discord_username", username).limit(1).execute()
+        resp = supabase.table("discord_osu").select("league").eq("discord_username", username).limit(1).execute()
+        league = resp.data[0]['league']
+        response = supabase.table(league).select('osu_username', 'initial_pp').eq('discord_username', username).limit(1).execute()
         if response.data and len(response.data) > 0:
+            response.data[0]['league'] = league
             return response.data[0]
     except Exception as e:
         logging.error(f"Error searching web username: {e}")
