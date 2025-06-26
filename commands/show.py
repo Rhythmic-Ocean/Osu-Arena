@@ -1,5 +1,6 @@
-from core_v2 import get_table_data, TABLE_MODES, bot
+from core_v2 import get_table_data, TABLE_MODES, bot, render_table_image
 from discord.ext import commands
+import discord
 
 @bot.command()
 @commands.cooldown(1, 20, commands.BucketType.user)
@@ -9,41 +10,31 @@ async def show(ctx, leag: str):
         await ctx.send("❌ Invalid league name. Use one of: " + ", ".join(TABLE_MODES.values()))
         return
 
-
     loading_message = await ctx.send(f"⏳ Loading data for **{league}** league, please wait...")
 
     try:
         headers, rows = await get_table_data(league.lower())
     except Exception as e:
         print(f"error: {e}")
+        await loading_message.edit(content="⚠️ Failed to load data.")
         return
 
     if not rows:
         await loading_message.edit(content="⚠️ This table is empty.")
         return
 
-    col_widths = [len(h) for h in headers]
-    for row in rows:
-        for i, item in enumerate(row):
-            col_widths[i] = max(col_widths[i], len(str(item)))
+    image_buf = render_table_image(headers, rows)
+    file = discord.File(fp=image_buf, filename="table.png")
+    embed = discord.Embed(title=f"{league} League")
+    embed.set_image(url="attachment://table.png")
 
-    def format_row(row):
-        return " | ".join(str(item).ljust(col_widths[i]) for i, item in enumerate(row))
-
-    formatted = format_row(headers) + "\n"
-    formatted += "-+-".join("-" * w for w in col_widths) + "\n"
-    for row in rows:
-        formatted += format_row(row) + "\n"
-
-    if len(formatted) > 1990:
-        await loading_message.edit(content="⚠️ Too much data to display in one message.")
-    else:
-        await loading_message.edit(content = f"{league} League")
-        await ctx.send(f"```txt\n{formatted}```")
-        
+    await loading_message.delete()
+    await ctx.send(embed=embed, file=file)
 
 @show.error
 async def show_error(ctx, error):
     if isinstance(error, commands.CommandOnCooldown):
         retry_after = error.retry_after
-        await ctx.send(f"You are on cooldown! Try again in {retry_after:.2f} seconds.")
+        await ctx.send(f"⏳ You are on cooldown! Try again in {retry_after:.2f} seconds.")
+
+
