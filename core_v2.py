@@ -37,7 +37,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 
 
-redirect_url = "https://rt4d.com/"
+redirect_url = "https://rt4d-production.up.railway.app/"
 serializer = URLSafeSerializer(SEC_KEY)
 
 auth = AsynchronousAuthHandler(client_id, client_secret, redirect_url, Scope.identify())

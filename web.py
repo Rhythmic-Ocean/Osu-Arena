@@ -18,7 +18,7 @@ app.secret_key = os.getenv("FLASK_SECKEY")
 SEC_KEY = os.getenv("SEC_KEY")
 client_id = int(os.getenv("AUTH_ID"))
 client_secret = os.getenv("AUTH_TOKEN")
-redirect_url = "https://rt4d.com/" 
+redirect_url = "https://rt4d-production.up.railway.app/" 
 serializer = URLSafeSerializer(SEC_KEY)
 auth = AuthHandler(client_id, client_secret, redirect_url, Scope.identify())
 
