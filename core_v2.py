@@ -116,37 +116,36 @@ class ChallengeView(View):
         await interaction.response.send_message("You have declined the challenge.")
         self.stop()
 
-async def backup_database(leag):
-    league = leag.lower()
+async def backup_database():
     supabase = await create_supabase()
-    try:
-        response = await supabase.table(league).select("*").execute()
-        data = response.data
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+    for _, league in LEAGUE_MODES.items():
+        try:
+            response = await supabase.table(league).select("*").execute()
+            data = response.data
 
-        if not data:
-            logging.error(f"No data found in {league}")
-            return
-        
+            if not data:
+                logging.error(f"No data found in {league}")
+                return
+            
 
-        df = pd.DataFrome(data)
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-        filename = f"{league}_{timestamp}.csv"
-        df.to_csv(filename, index = False)
-
-
-        async with aiofiles.open(filename, "rb") as f:
-            contents = await f.read()
+            df = pd.DataFrame(data)
+            filename = f"{league}_{timestamp}.csv"
+            df.to_csv(filename, index = False)
 
 
-        storage_path = f"{league}/{filename}"
-        upload_response = await supabase.storage.from_("backups").upload(storage_path, contents)
+            async with aiofiles.open(filename, "rb") as f:
+                contents = await f.read()
 
-        if upload_response.get("error"):
-            logging.error(f"Upload error or {league}")
 
-    except Exception as e:
-        logging.error(f"Error backing up {league}: {e}")
-        
+            storage_path = f"{league}/{filename}"
+            upload_response = await supabase.storage.from_("backups").upload(storage_path, contents)
+            print(upload_response)
+        except Exception as e:
+            logging.error(f"Error backing up {league}: {e}")
+    folder = f"backup_{timestamp}"
+    return folder
+            
 
 
 
@@ -303,7 +302,6 @@ async def log_rivals(leag: str, challenger: str, challenged: str, pp: float):
             logging.warning(f"Missing PP data for challenger or challenged.")
             return None
 
-        # Insert into 'rivals'
         response = await supabase.table('rivals').insert({
             "league": league,
             "challenger": challenger_uname,
@@ -320,7 +318,6 @@ async def log_rivals(leag: str, challenger: str, challenged: str, pp: float):
 
         challenge_id = response.data[0]['challenge_id']
 
-        # Insert into 'challenged'
         await supabase.table('challenged').insert({
             "challenge_id": challenge_id,
             "discord_username": challenged,
@@ -328,9 +325,8 @@ async def log_rivals(leag: str, challenger: str, challenged: str, pp: float):
             "initial_pp": challenged_pp
         }).execute()
 
-        # Insert into 'challenger'
         await supabase.table('challenger').insert({
-            "challenge_id": challenge_id,  # fixed spelling here
+            "challenge_id": challenge_id,  
             "discord_username": challenger,
             "osu_username": challenger_uname,
             "initial_pp": challenger_pp
@@ -406,7 +402,6 @@ def render_table_image(headers, rows):
     n_rows, n_cols = df.shape
 
     fig, ax = plt.subplots(figsize=(n_cols * 3, n_rows * 0.6 + 1))
-    # Set figure background black
     fig.patch.set_facecolor('black')
     ax.set_facecolor('black')
     ax.axis('off')
@@ -420,13 +415,11 @@ def render_table_image(headers, rows):
     for (row, col), cell in table.get_celld().items():
         if row == 0:
             cell.set_text_props(weight='bold', color='white', fontsize=16)
-            cell.set_facecolor('#FF69B4')  # pink header background
+            cell.set_facecolor('#FF69B4')  
         else:
             cell.set_text_props(color='white')
-            # Zebra stripes with dark grey and black for better dark mode contrast
             cell.set_facecolor('#222222' if row % 2 == 0 else '#000000')
 
-        # cell borders white for visibility on dark
         cell.set_linewidth(1)
         cell.set_edgecolor('white')
 
@@ -436,6 +429,46 @@ def render_table_image(headers, rows):
     plt.close(fig)
     return buf
     
+async def update_init_pp(league):
+    supabase = await create_supabase()
+    try:
+        await supabase.rpc("update_init_pp",{"tbl_name": league}).execute()
+    except Exception as e:
+        print(f"error updating init pp: {e}")
+        return 
+    
+async def update_leagues():
+    supabase = await create_supabase()
+    print("here")
+    players = []
+    i = 0
+    try:
+        query = await supabase.table('discord_osu').select('discord_username', 'league', 'future_league').execute()
+        datas = query.data
+        for data in datas:
+            print(data)
+            league = data['league']
+            future_league = data['future_league']
+            uname = data['discord_username']
+            print(uname)
+            if data['league'] == data['future_league']:
+                continue
+            osu_uname =await get_osu_uname(discord_uname=uname)
+            pp = await get_pp(discord_username=uname)
+            print(f"{osu_uname}, {pp}")
+            await supabase.table(league).delete().eq('discord_username', uname).execute()
+            await supabase.table(future_league).insert({'discord_username': uname, 'osu_username': osu_uname, 'initial_pp': pp}).execute()
+            await supabase.table('discord_osu').update({'league': future_league}).eq('discord_username', uname).execute()
+            players.append({
+                'discord_username': uname,
+                'league_transferred': future_league,
+                'old_league': league
+            })
+            i = i+1
+        return players
+    except Exception as e:
+        logging.error(f"Error updating leagues: {e}")
+
 
 
 

@@ -29,7 +29,7 @@ LEAGUE_MODES = {
     20000: "diamond",
     50000: "platinum",
     100000: "gold",
-    500000: "silver",
+    250000: "silver",
     sys.maxsize: "bronze",
 }
 
@@ -86,6 +86,7 @@ def route():
                    if g_rank < threshold:
                        add_user(league_try, state, uname, pp, g_rank, osu_id)
                        league = league_try
+                       break
 
             msg = "You have been verified, you can safely exit this page."
             return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
