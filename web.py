@@ -33,36 +33,26 @@ LEAGUE_MODES = {
     sys.maxsize: "bronze",
 }
 
-
-
 @app.route("/")
-def route():
-    if "discord_username" in session:
-        username = session["discord_username"]
-        entry=  search(username)
-        if entry: 
-            uname = entry['osu_username'] 
-            pp = entry['initial_pp']
-            league = entry['league']
-            msg = "You already have a linked account, please contact spinneracc or Rhythmic_Ocean if you wanna link a different account or restart this session."
-            return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
-    
-
+def home():
     load = request.args.get("state")
     code = request.args.get("code")
-
-
     if load and code:
         try:
             data = serializer.loads(load)
-            state = data["discord_username"]
+            state = data.get('user_name')
+            state_id = data.get('user_id')
+            print(state)
+            print(state_id)
 
         except Exception as e:
             logging.error(f"Error decrypting username: {e}")
             return "Invalid state, Please try again.",400
         
-
-        entry =  search(state)
+        try:
+            entry =  search(state)
+        except Exception as e:
+            logging.error(f"Nothing found in entry/ Error at search function: {e}")
         if entry: 
             uname = entry['osu_username'] 
             pp = entry['initial_pp']
@@ -84,15 +74,26 @@ def route():
 
             for threshold, league_try in LEAGUE_MODES.items():
                    if g_rank < threshold:
-                       add_user(league_try, state, uname, pp, g_rank, osu_id)
+                       add_user(league_try, state, uname, pp, g_rank, osu_id, state_id)
                        league = league_try
                        break
 
             msg = "You have been verified, you can safely exit this page."
             return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
-        
+    
+    elif "discord_username" in session:
+        username = session["discord_username"]
+        entry=  search(username)
+        if entry: 
+            uname = entry['osu_username'] 
+            pp = entry['initial_pp']
+            league = entry['league']
+            msg = "You already have a linked account, please contact spinneracc or Rhythmic_Ocean if you wanna link a different account or restart this session."
+            return render_template("dashboard.html", username = uname, pp = pp, msg = msg, league = league)
+    
+
     return render_template("welcome.html")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8000))
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)

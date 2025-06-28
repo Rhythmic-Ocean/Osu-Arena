@@ -24,7 +24,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-RIVAL_RESULTS_ID =  1378928704121737326 #1386091184706818220
+RIVAL_RESULTS_ID =      1378928704121737326 # 1386091184706818220
 
 logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
 
@@ -317,23 +317,28 @@ async def log_rivals(leag: str, challenger: str, challenged: str, pp: float):
             return None
 
         challenge_id = response.data[0]['challenge_id']
+        print(challenge_id)
+        try:
 
-        await supabase.table('challenged').insert({
-            "challenge_id": challenge_id,
-            "discord_username": challenged,
-            "osu_username": challenged_uname,
-            "initial_pp": challenged_pp
-        }).execute()
+            await supabase.table('challenged').insert({
+                "challenge_id": challenge_id,
+                "discord_username": challenged,
+                "osu_username": challenged_uname,
+                "initial_pp": challenged_pp
+            }).execute()
 
-        await supabase.table('challenger').insert({
-            "challenge_id": challenge_id,  
-            "discord_username": challenger,
-            "osu_username": challenger_uname,
-            "initial_pp": challenger_pp
-        }).execute()
+            await supabase.table('challenger').insert({
+                "challenge_id": challenge_id,  
+                "discord_username": challenger,
+                "osu_username": challenger_uname,
+                "initial_pp": challenger_pp
+            }).execute()
+        except Exception as e:
+            logging.error(f"Error here: {e}")
+            print((f"Error here: {e}"))
 
+        print(challenge_id)
         return challenge_id
-
     except Exception as e:
         logging.error(f"Error in log_rivals(): {e}")
         return None
@@ -375,10 +380,13 @@ async def get_msg_id(challenge_id):
     try:
         row = await supabase.table('mesg_id').select("msg_id").eq("challenge_id", challenge_id).execute()
         result = row.data[0]['msg_id']
+        if result is None:
+            return None
         print (result)
         return result
     except Exception as e:
         logging.error(f"Error at get msg id: {e}")
+    return None
 
 async def check_pending(challenger, challenged):
     challenger_uname = await get_osu_uname(challenger)
@@ -441,7 +449,6 @@ async def update_leagues():
     supabase = await create_supabase()
     print("here")
     players = []
-    i = 0
     try:
         query = await supabase.table('discord_osu').select('discord_username', 'league', 'future_league').execute()
         datas = query.data
@@ -464,10 +471,24 @@ async def update_leagues():
                 'league_transferred': future_league,
                 'old_league': league
             })
-            i = i+1
         return players
     except Exception as e:
         logging.error(f"Error updating leagues: {e}")
+        return []
+    
+async def get_discord_id(username):
+    supabase = await create_supabase()
+    try:
+        print(username)
+        query = await supabase.table('discord_osu').select('discord_id').eq('osu_username', username).execute()
+        print(query)
+        result = query.data[0]['discord_id']
+        print(result)
+        return result
+    except Exception as e:
+        logging.error(f"Error at get_discord_id: {e}")
+        print(f"Error at get_discord_id: {e}")
+        return None
 
 
 

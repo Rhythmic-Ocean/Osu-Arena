@@ -58,7 +58,6 @@ async def challenge(ctx, player: discord.Member, pp: int):
 
     try:
         allowance = await challenge_allowed(challenger.name, player.name, league)
-        print(allowance)
     except Exception as e:
         await ctx.send(f"Error 2: {e}")
     if allowance == 2:
@@ -142,7 +141,7 @@ async def challenge(ctx, player: discord.Member, pp: int):
                 return
             await ctx.send(f"{challenger.mention}, {player.mention} accepted your challenge! Type `!show rivals` to view ongoing challenges.")
             if rival_results_channel:
-                await challenge_request.edit(content=f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp})|{pp}PP|unfinished")
+                await challenge_request.edit(content=f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) |{pp}PP| Unfinished")
         except Exception as e:
             await ctx.send(f"An error occurred at challenge accepted: {e}")
 

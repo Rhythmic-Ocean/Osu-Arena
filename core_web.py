@@ -28,7 +28,7 @@ def search(username: str) -> dict | None:
         logging.error(f"Error searching web username: {e}")
     return None
 
-def add_user(league, state, username: str, pp: int, g_rank: int, osu_id: int):
+def add_user(league, state, username: str, pp: int, g_rank: int, osu_id: int, state_id: int) -> None:
     try:
         supabase.table("discord_osu").insert({
             "discord_username": state,
@@ -36,7 +36,8 @@ def add_user(league, state, username: str, pp: int, g_rank: int, osu_id: int):
             "current_pp": pp,
             "league": league,
             "global_rank": g_rank,
-            "osu_id": osu_id
+            "osu_id": osu_id,
+            "discord_id": state_id
         }).execute()
     except Exception as e:
         logging.error(f"Error inserting into discord_osu table: {e}")

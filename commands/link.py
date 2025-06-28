@@ -3,7 +3,10 @@ import discord
 
 @bot.command()
 async def link(ctx):
-    state = serializer.dumps({"discord_username": ctx.author.name})
+    user_id = ctx.author.id
+    user_name = ctx.author.name
+    secret = {'user_id': user_id, 'user_name': user_name}
+    state = serializer.dumps(secret)
     auth_url = auth.get_auth_url() + f"&state={state}"
     embed = discord.Embed(
     title="Link Your osu! Account",
