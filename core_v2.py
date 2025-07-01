@@ -223,13 +223,22 @@ async def check_challenger_challenges(usernme: str) -> int:
     try:
         response = await (
             supabase.table('rivals')
-            .select("challenger, challenge_status")
+            .select("challenger")
             .eq("challenger", username)
             .in_("challenge_status", [CHALLENGE_STATUS[1], CHALLENGE_STATUS[3]])
             .order("issued_at", desc=True)
             .execute()
         )
-        return len(response.data)
+        response2 = await (
+            supabase.table('rivals')
+            .select("challenged")
+            .eq("challenged", username)
+            .in_("challenge_status", [CHALLENGE_STATUS[1], CHALLENGE_STATUS[3]])
+            .order("issued_at", desc=True)
+            .execute()
+        )
+        val = len(response.data) + len(response2.data)
+        return val
     except Exception as e:
         logging.error(f"error at check_challenger_challenges(): {e}")
         return 0
@@ -452,17 +461,18 @@ async def update_leagues():
     print("here")
     players = []
     try:
-        query = await supabase.table('discord_osu').select('discord_username', 'league', 'future_league').execute()
+        query = await supabase.table('discord_osu').select('discord_username, discord_id, league, future_league').execute()
         datas = query.data
         for data in datas:
             print(data)
             league = data['league']
             future_league = data['future_league']
+            u_id = data['discord_id']
             uname = data['discord_username']
             print(uname)
             if data['league'] == data['future_league']:
                 continue
-            osu_uname =await get_osu_uname(discord_uname=uname)
+            osu_uname = await get_osu_uname(discord_uname=uname)
             pp = await get_pp(discord_username=uname)
             print(f"{osu_uname}, {pp}")
             await supabase.table(league).delete().eq('discord_username', uname).execute()
@@ -471,7 +481,8 @@ async def update_leagues():
             players.append({
                 'discord_username': uname,
                 'league_transferred': future_league,
-                'old_league': league
+                'old_league': league,
+                'discord_id': u_id
             })
         return players
     except Exception as e:
