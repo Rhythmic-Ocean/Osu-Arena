@@ -24,7 +24,9 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-RIVAL_RESULTS_ID =      1378928704121737326 # 1386091184706818220
+RIVAL_RESULTS_ID =  1378928704121737326 # 1386091184706818220
+GUILD_ID = 1366564371899224115  #1389336700630732930 
+WELCOME_ID =  1366564371899224115  #1389336701310337190
 
 logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
 
