@@ -70,9 +70,11 @@ async def send_winner_announcement(bot, channel_id, result, id, pp):
         return      
 
 async def monitor_new_user(bot):
-    print(existing_id)
     guild = bot.get_guild(GUILD_ID)
     channel = guild.get_channel(WELCOME_ID)
+    if channel is None:
+        logging.error(f"Could not find channel with ID {WELCOME_ID}")
+        print(f"Could not find channel with ID {WELCOME_ID}")
     while True:
         try:
             supabase = await create_supabase()
@@ -81,38 +83,50 @@ async def monitor_new_user(bot):
             except Exception as e:
                 print(f"something wrong at query in monitor_new_user at monitoring.py: {e}")
                 logging.error(f"something wrong at query in monitor_new_user at monitoring.py: {e}")
-            print("hi")
             if not init.is_set():
-                print("u here?")
                 for data in query.data:
-                    print (data)
                     existing_id.add(data['discord_id'])
                 init.set()
-                print(existing_id)
             else:
-                print("random")
                 for data in query.data:
                     if data['discord_id'] in existing_id:
                         continue
                     else:
                         try:
-                            await give_role(bot, data['discord_id'], data['league'], guild)
-                            await channel.send(f"<@{data['discord_id']}>, you have been assigned to {data['league']} league.")
+                            query = await supabase.table('discord_osu').select('osu_username').eq('discord_id', data['discord_id']).execute()
+                            osu_username = query.data[0]['osu_username']
+                        except Exception as e:
+                            print(f"Failed to query new discord_id: {e}")
+                        try:
+                            await give_role_nickname (data['discord_id'], data['league'], guild, osu_username)
+                            await channel.send(f"<@{data['discord_id']}>, you have been assigned to {data['league'].capitalize()} league.")
                             existing_id.add(data['discord_id'])
                         except Exception as e:
                             logging.error(f"Error inside monitor_new_user: {e}")
+                            print(f"Error inside add in user: {e}")
             await asyncio.sleep(5)
         except Exception as e:
             logging.error(f"Error at the end of monitor_new_user(): {e}")
+            print(f"Error at the end of monitor_new_user(): {e}")
 
 
 
 
-async def give_role(bot, discord_id, league, guild):
+async def give_role_nickname (discord_id, league, guild, osu_username):
     member = await guild.fetch_member(discord_id)
     role = discord.utils.get(guild.roles, name = league.capitalize())
 
-    await member.add_roles(role)
+    try:
+        await member.add_roles(role)
+    except Exception as e:
+        logging.error(f"Error adding role: {e}")
+        print(f"Error adding role: {e}")
+
+    try:
+        await member.edit(nick = osu_username)
+    except Exception as e:
+        logging.error(f"Error changing nickname {e}")
+        print (f"Error changing nickname {e}")
 
                         
 
