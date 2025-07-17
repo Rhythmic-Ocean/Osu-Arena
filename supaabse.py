@@ -68,6 +68,12 @@ def update_pp():
                 print(f"Failed to update {osu_id}: {e}")
 
 
+@app.route("/")
+def index():
+    return "Flask is running!"
+
+
+
 @app.route("/update", methods=["GET"])
 def handle_update():
     update_pp()
