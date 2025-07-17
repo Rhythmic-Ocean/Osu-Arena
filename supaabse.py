@@ -5,6 +5,7 @@ from osu import Scope, GameModeStr
 import os
 from dotenv import load_dotenv
 from web import LEAGUE_MODES
+from threading import Thread
 
 load_dotenv(dotenv_path="sec.env")
 
@@ -76,9 +77,11 @@ def index():
 
 @app.route("/update", methods=["GET"])
 def handle_update():
-    update_pp()
-    return "Update triggered!", 200
+    def run_update():
+        update_pp()
 
+    Thread(target=run_update).start()
+    return "Update started in background.", 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
