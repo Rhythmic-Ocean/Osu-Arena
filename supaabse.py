@@ -5,9 +5,11 @@ from osu import Scope, GameModeStr
 import os
 from dotenv import load_dotenv
 from web import LEAGUE_MODES
-from threading import Thread
+from threading import Thread, Lock
+
 
 load_dotenv(dotenv_path="sec.env")
+update_lock = Lock()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -78,7 +80,11 @@ def index():
 @app.route("/update", methods=["GET"])
 def handle_update():
     def run_update():
-        update_pp()
+        with update_lock:
+            update_pp()
+
+    if update_lock.locked():
+        return "Update already in progress.", 429  
 
     Thread(target=run_update).start()
     return "Update started in background.", 200
