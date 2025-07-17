@@ -6,8 +6,7 @@ import os
 from dotenv import load_dotenv
 from web import LEAGUE_MODES
 
-# Setup
-load_dotenv("sec.env")
+load_dotenv(dotenv_path="sec.env")
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -76,5 +75,4 @@ def handle_update():
 
 
 if __name__ == "__main__":
-    app.run()
-
+    app.run() 
