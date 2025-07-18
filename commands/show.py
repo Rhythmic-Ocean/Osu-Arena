@@ -37,4 +37,9 @@ async def show_error(ctx, error):
         retry_after = error.retry_after
         await ctx.send(f"⏳ You are on cooldown! Try again in {retry_after:.2f} seconds.")
 
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("ℹ️ Use one of: " + ", ".join(TABLE_MODES.values()))
+
+
+
 
