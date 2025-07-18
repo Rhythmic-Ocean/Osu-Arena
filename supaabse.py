@@ -36,10 +36,21 @@ def get_pp(osu_username):
             pp = round(user.statistics.pp)
             username = user.username
             global_rank = user.statistics.global_rank
-            return username, global_rank, pp
+            secs_played= user.statistics.play_time
+            hours_played = secs_played/3600
+            ii = get_ii(pp, hours_played)
+            print(ii)
+            return username, global_rank, pp, ii
         except Exception as e:
             print(f"Error fetching data for {osu_username}: {e}")
     return None
+
+def get_ii(pp, hours):
+    expected_hours = -4.49 + 0.0601 * pp + 9.66e-6 * (pp ** 2)
+    if expected_hours == 0:
+        return 0 
+    ii = round(expected_hours / hours, 2)
+    return ii
 
 
 def update_pp():
@@ -53,7 +64,7 @@ def update_pp():
         osu_id = user.get("osu_id")
         data = get_pp(osu_id)
         if data is not None:
-            username, rank, pp = data
+            username, rank, pp, ii = data
             league = "Unranked"
             for threshold, league_try in LEAGUE_MODES.items():
                 if rank < threshold:
@@ -64,7 +75,8 @@ def update_pp():
                     "current_pp": pp,
                     "osu_username": username,
                     "global_rank": rank,
-                    "future_league": league
+                    "future_league": league,
+                    "ii" : ii
                 }).eq("osu_id", osu_id).execute()
                 print(f"{username}'s osu! pp: {pp}, rank: {rank} updated.")
             except Exception as e:

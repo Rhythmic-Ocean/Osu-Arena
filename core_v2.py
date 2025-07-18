@@ -191,7 +191,7 @@ async def get_table_data(leag):
             print(f"error sync leagus: {e}")
             return
         try:
-            response = await supabase.table(league).select("osu_username, initial_pp, current_pp, pp_change, percentage_change").order("pp_change", desc= True).execute()
+            response = await supabase.table(league).select("osu_username, initial_pp, current_pp, pp_change, percentage_change, ii").order("pp_change", desc= True).execute()
         except Exception as e:
             print(f"error at show league tables: {e}")
             return

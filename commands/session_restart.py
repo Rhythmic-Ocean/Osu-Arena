@@ -30,6 +30,9 @@ async def session_restart(ctx):
             if not old_role or not new_role:
                 await ctx.send(f"⚠️ One or both roles not found: {old_league}, {league}")
                 continue
+            if new_role in person.roles and old_role not in person.roles:
+                await ctx.send(f"ℹ️ <@{person.id}> is already correctly assigned to {league} role. Skipping.")
+                continue
             await ctx.send(f"<@{person.id}> transferred to {league} from {old_league}")
             try:
                 await person.remove_roles(old_role)
