@@ -15,17 +15,23 @@ async def monitor_database(bot, channel_id):
     while True:
         try:
             supabase = await create_supabase()
-            query = await supabase.table('rivals').select(
-            'challenger, challenged,challenge_id, for_pp, challenger_status, challenged_status'
-            ).eq('challenge_status', CHALLENGE_STATUS[3]).execute()
-            datas = query.data
+            try:
+                query = await supabase.table('rivals').select(
+                'challenger, challenged,challenge_id, for_pp, challenger_stats, challenged_stats'
+                ).eq('challenge_status', CHALLENGE_STATUS[3]).execute()
+                datas = query.data
+            except Exception as e:
+                print("Exception as {}",e)
+
+            print("hello?")
 
             for data in datas:
-                if data['for_pp'] <= data['challenger_status']:
+                print(data)
+                if data['for_pp'] <= data['challenger_stats']:
                     winner = data['challenger']
                     result = await win(winner, data['challenge_id'])
                     await send_winner_announcement(bot, channel_id, result, data['challenge_id'], data['for_pp'])
-                elif data['for_pp'] <= data['challenged_status']:
+                elif data['for_pp'] <= data['challenged_stats']:
                     winner = data['challenged']
                     result = await win(winner, data['challenge_id'])
                     await send_winner_announcement(bot, channel_id, result, data['challenge_id'], data['for_pp'])
