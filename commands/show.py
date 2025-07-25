@@ -1,44 +1,39 @@
-from core_v2 import get_table_data, TABLE_MODES, bot, render_table_image
+from core_v2 import get_table_data, TABLE_MODES, bot, render_table_image, GUILD
 from discord.ext import commands
 import discord
+from discord import app_commands
 
-@bot.command()
-@commands.cooldown(1, 20, commands.BucketType.user)
-async def show(ctx, leag: str):
+@bot.tree.command(name="show", description="Show the league table", guild=GUILD)
+@app_commands.describe(leag="League name")
+async def show(interaction: discord.Interaction, leag: str):
     league = leag.capitalize()
     if league not in TABLE_MODES.values():
-        await ctx.send("❌ Invalid league name. Use one of: " + ", ".join(TABLE_MODES.values()))
+        await interaction.response.send_message(
+                "❌ Invalid league name. Use one of: " + ", ".join(TABLE_MODES.values()), ephemeral=True
+            )
         return
-
-    loading_message = await ctx.send(f"⏳ Loading data for **{league}** league, please wait...")
-
+    await interaction.response.defer()
     try:
         headers, rows = await get_table_data(league.lower())
     except Exception as e:
         print(f"error: {e}")
-        await loading_message.edit(content="⚠️ Failed to load data.")
+        await interaction.response.send_message(content="⚠️ Failed to load data.")
         return
 
     if not rows:
-        await loading_message.edit(content="⚠️ This table is empty.")
+        await interaction.response.send_message(content="⚠️ This table is empty.")
         return
 
     image_buf = render_table_image(headers, rows)
     file = discord.File(fp=image_buf, filename="table.png")
     embed = discord.Embed(title=f"{league} League")
     embed.set_image(url="attachment://table.png")
-
-    await loading_message.delete()
-    await ctx.send(embed=embed, file=file)
-
-@show.error
-async def show_error(ctx, error):
-    if isinstance(error, commands.CommandOnCooldown):
-        retry_after = error.retry_after
-        await ctx.send(f"⏳ You are on cooldown! Try again in {retry_after:.2f} seconds.")
-
-    if isinstance(error, commands.MissingRequiredArgument):
-        await ctx.send("ℹ️ Use one of: " + ", ".join(TABLE_MODES.values()))
+    try:
+        await interaction.followup.send(embed=embed, file=file)
+    except Exception as e:
+        await interaction.followup.send_message("⚠️ An unknown error occurred.")
+        print(f"Unexpected error in /show: {e}")
+    
 
 
 

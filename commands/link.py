@@ -1,20 +1,27 @@
-from core_v2 import serializer, auth, bot
+from core_v2 import serializer, auth, bot, GUILD
 import discord
+from discord import app_commands
 
-@bot.command()
-async def link(ctx):
-    user_id = ctx.author.id
-    user_name = ctx.author.name
+@bot.tree.command(name="link", description="Link your osu! account", guild=GUILD)
+async def link(interaction: discord.Interaction):
+    user_id = interaction.user.id
+    user_name = interaction.user.name
     secret = {'user_id': user_id, 'user_name': user_name}
     state = serializer.dumps(secret)
     auth_url = auth.get_auth_url() + f"&state={state}"
     embed = discord.Embed(
-    title="Link Your osu! Account",
-    description="Click the title to begin linking your account. Please DO NOT share this link.",
-    color=discord.Color.blue(),
-    url=auth_url
+        title="Link Your osu! Account",
+        description="Click the title to begin linking your account. Please DO NOT share this link.",
+        color=discord.Color.blue(),
+        url=auth_url
     )
+
     try:
-        await ctx.author.send(embed=embed)
+        await interaction.user.send(embed=embed)
+        await interaction.response.send_message("📬 I’ve sent you a DM with the link!", ephemeral=True)
     except discord.Forbidden:
-        await ctx.send(f"{ctx.author.mention}, I couldn't DM you. Please enable DMs from server members.")
+        await interaction.response.send_message(
+            f"❌ I couldn’t DM you. Please enable DMs from server members.",
+            ephemeral=True
+        )
+

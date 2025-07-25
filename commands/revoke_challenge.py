@@ -1,28 +1,46 @@
-from core_v2 import bot, check_pending, revoke_success, get_msg_id, RIVAL_RESULTS_ID
+from core_v2 import bot, check_pending, revoke_success, get_msg_id, RIVAL_RESULTS_ID, GUILD
 import discord
+from discord import app_commands
 
-@bot.command()
-async def revoke_challenge(ctx,player:discord.Member):
-    challenger = ctx.author
+@bot.tree.command(name="revoke_challenge", description="Revoke a pending challenge with another player.", guild=GUILD)
+@app_commands.describe(player="The player you want to revoke your challenge with.")
+async def revoke_challenge(interaction: discord.Interaction, player: discord.Member):
+    challenger = interaction.user
     challenged = player
+
     checking = await check_pending(challenger.name, challenged.name)
     if checking is None:
-        await ctx.send(f"{challenger.mention}. You have no pending challenges with {challenged.mention}")
+        await interaction.response.send_message(
+            f"{challenger.mention}, you have no pending challenges with {challenged.mention}."
+        )
         return
+
     try:
         try:
             msg_id = await get_msg_id(checking)
             channel = bot.get_channel(RIVAL_RESULTS_ID)
             if channel is None:
-                await ctx.send("Could not find the #rival-result channel.")
+                await interaction.response.send_message("Could not find the #rival-result channel.")
                 return
             msg = await channel.fetch_message(msg_id)
-            await msg.edit(content=f"{challenger.mention} vs {player.mention}|Challenge Revoked")
+            await msg.edit(content=f"{challenger.mention} vs {player.mention} | Challenge Revoked")
         except Exception as e:
-            await ctx.send(f"Failed to delete content in '#rival-result'. Error: {e}")
+            await interaction.response.send_message(f"Failed to update message in #rival-result. Error: {e}")
+            return
+
         await revoke_success(checking)
-        await ctx.send(f"{challenger.mention}, your challenge to {challenged.mention} has been revoked successfully.")
-        await challenged.send(f"{challenger.mention} has revoked the previous challenge. Any interaction with the above interface WILL be invalid.")
+        await interaction.response.send_message(
+            f"{challenger.mention}, your challenge to {challenged.mention} has been revoked successfully."
+        )
+
+        try:
+            await challenged.send(
+                f"{challenger.mention} has revoked the previous challenge. Any interaction with the above interface WILL be invalid."
+            )
+        except discord.Forbidden:
+            await interaction.followup.send(
+                f"{challenged.mention} has DMs disabled. Could not notify them."
+            )
+
     except Exception as e:
-        await ctx.send(f"Error in challenge deletion: {e}")
-    
+        await interaction.response.send_message(f"Error in challenge deletion: {e}")

@@ -1,167 +1,145 @@
-from core_v2 import bot, ROLE_MODES, ChallengeView, check_challenger_challenges, challenge_accepted,get_pp, RIVAL_RESULTS_ID, challenge_allowed, log_rivals, challenge_declined, store_msg_id, check_league, revoke_success
+from core_v2 import (
+    bot, ROLE_MODES, ChallengeView, check_challenger_challenges, challenge_accepted, get_pp,
+    RIVAL_RESULTS_ID, challenge_allowed, log_rivals, challenge_declined, store_msg_id,
+    check_league, revoke_success, GUILD
+)
 import discord
-from discord.ext import commands
+from discord import app_commands
 
 MIN_PP = 250
 MAX_PP = 750
 
-@bot.command()
-@commands.cooldown(1, 60, commands.BucketType.user)
-async def challenge(ctx, player: discord.Member, pp: int):
-    challenge_request = None
-    challenger = ctx.author
+@bot.tree.command(name="challenge", description="Challenge a user in your league", guild=GUILD)
+@app_commands.describe(player="Player to challenge", pp="Performance points (250–750)")
+async def challenge(interaction: discord.Interaction, player: discord.Member, pp: int):
+    challenger = interaction.user
+
     if challenger.id == player.id:
-        await ctx.send(f"{challenger.mention}, you cannot challenge yourself!")
+        await interaction.response.send_message("❌ You cannot challenge yourself!", ephemeral=True)
         return
+
     if not (MIN_PP <= pp <= MAX_PP):
-        await ctx.send(f"{challenger.mention}, challenge failed. Choose a PP value between 250 and 750.")
+        await interaction.response.send_message("❌ PP must be between 250 and 750.", ephemeral=True)
         return
+
     try:
         number_of_challenges = await check_challenger_challenges(challenger)
     except Exception as e:
-        await ctx.send(f"Error 1 at challenge command: {e}")
+        await interaction.response.send_message(f"❌ Error while checking challenges: {e}", ephemeral=True)
+        return
 
     if number_of_challenges >= 3:
-        await ctx.send(f"{challenger.mention}, you already have 3 ongoing/ pending challenges. Complete or revoke any pending challenges before issuing more.")
+        await interaction.response.send_message("❌ You already have 3 active or pending challenges.", ephemeral=True)
         return
 
     challenger_role = None
     challenged_role = None
     for league in ROLE_MODES.values():
-        if challenger_role is None and any(league == role.name for role in ctx.author.roles):
+        if not challenger_role and any(league == r.name for r in challenger.roles):
             challenger_role = league
-        if challenged_role is None and any(league == role.name for role in player.roles):
+        if not challenged_role and any(league == r.name for r in player.roles):
             challenged_role = league
         if challenger_role and challenged_role:
             break
 
-    if challenger_role is None:
-        await ctx.send(f"{ctx.author.mention}, you do not have any league. Please ask spinneracc to assign you one.")
+    if not challenger_role:
+        await interaction.response.send_message("❌ You have not been assigned a league role.", ephemeral=True)
         return
-
-    if challenged_role is None:
-        await ctx.send(f"{player.mention} has not been assigned a league.")
+    if not challenged_role:
+        await interaction.response.send_message(f"❌ {player.display_name} has not been assigned a league.")
         return
-
     if challenged_role != challenger_role:
-        await ctx.send(f"{challenger.mention}, challenge failed. Please choose someone from your own league.")
+        await interaction.response.send_message("❌ You can only challenge players in your own league.", ephemeral=True)
         return
-    league = challenger_role
-    bool1 = await check_league(challenger.name, league)
-    bool2 = await check_league(player.name, league)
 
+    # League verification
+    bool1 = await check_league(challenger.name, challenger_role)
+    bool2 = await check_league(player.name, challenger_role)
     if not bool1:
-        await ctx.send(f"{challenger.mention}, your role and database league are mismatched, please ask the admins to fix it. You won't be able to challenge or receive challenge until then.")
-        if not bool2:
-            await ctx.send(f"{player.mention}, your role and database league are mismatched, please ask admins to fix it. You won't be able to challenge or receive challenge until then.")
+        await interaction.response.send_message("❌ Your league in the DB doesn't match your role. Ask admin.", ephemeral=True)
         return
+    if not bool2:
+        await interaction.followup.send(f"⚠️ {player.mention}'s role and DB league don't match. Ask admin.")
 
+    # Check allowance
     try:
-        allowance = await challenge_allowed(challenger.name, player.name, league)
+        allowance = await challenge_allowed(challenger.name, player.name, challenger_role)
     except Exception as e:
-        await ctx.send(f"Error 2: {e}")
-    if allowance == 2:
-        await ctx.send(f"{challenger.mention}, you already have a pending challenge with {player.mention}")
+        await interaction.response.send_message(f"❌ Error while checking allowance: {e}", ephemeral=True)
         return
-    elif allowance == 3:
-        await ctx.send(f"{challenger.mention}, you already have an ongoing challenge with {player.mention}")
+
+    allowance_messages = {
+        2: f"❌ You already have a pending challenge with {player.mention}.",
+        3: f"❌ You already have an ongoing challenge with {player.mention}.",
+        4: f"❌ You can only challenge the same player once per day.",
+        5: f"❌ One of you isn't linked to the database. Please contact an admin.",
+        6: f"❌ Internal error occurred. Please contact the dev."
+    }
+    if allowance in allowance_messages:
+        await interaction.response.send_message(allowance_messages[allowance])
         return
-    elif allowance == 4:
-        await ctx.send(f"{challenger.mention}, you cannot challenge the same player more than once a day.")
-        return
-    elif allowance == 5:
-        await ctx.send(f"{challenger.mention}, you or {player.mention} don't have your account linked to the database yet. Please contact me if you think it's a mistake.")
-        return
-    elif allowance == 6:
-        await ctx.send(f"{challenger.mention}, ERROR: Failed to execute function 'challenged_allowed'. Challenge failed.")
+
+    # Log challenge
     try:
-        challenge_id = await log_rivals(league, challenger.name, player.name, pp)
+        challenge_id = await log_rivals(challenger_role, challenger.name, player.name, pp)
     except Exception as e:
-        await ctx.send(f"{challenger.mention}Error at log function, please report. Error: {e}")
+        await interaction.response.send_message(f"❌ Error logging challenge: {e}")
         return
 
+    await interaction.response.send_message(f"{challenger.mention} has challenged {player.mention} for {pp}pp.")
 
-
-    await ctx.send(f"{challenger.mention} has challenged {player.mention}. Challenge request has been sent.")
-    rival_results_channel = bot.get_channel(RIVAL_RESULTS_ID)
-
-
-
+    # Send DM to challenged player
     try:
         view = ChallengeView(challenged=player)
         await player.send(
-            f"You have been challenged by {challenger.mention} for {pp}pp in **{challenger_role}** league.\nDo you accept?",
+            f"You have been challenged by {challenger.display_name} for {pp}pp in the **{challenger_role}** league.\nDo you accept?",
             view=view
         )
     except discord.Forbidden:
-        await ctx.send(f"Challenge unsuccessful. {player.mention} may have DMs disabled. Challenge has been revoked.")
-        try:
-                await revoke_success(challenge_id)
-                return  
-        except Exception as e:
-            await ctx.send(f"ERROR: failed to log revokes: `{e}`")
-            return
-        
+        await interaction.followup.send("❌ Challenge failed. Player has DMs disabled.")
+        await revoke_success(challenge_id)
+        return
+
+    # Log in results channel
+    challenge_request = None
+    rival_results_channel = bot.get_channel(RIVAL_RESULTS_ID)
     if rival_results_channel:
         try:
-
-            challenge_request = await rival_results_channel.send(f"{challenger.mention} has issued a challenge to {player.mention} for {pp}pp in {challenger_role} league.")
-            msg_id = challenge_request.id
-            await store_msg_id(challenge_id, msg_id)
+            challenge_request = await rival_results_channel.send(
+                f"{challenger.mention} has issued a challenge to {player.mention} for {pp}pp in {challenger_role} league."
+            )
+            await store_msg_id(challenge_id, challenge_request.id)
         except discord.Forbidden:
-            await ctx.send(f"No permission to send message in {rival_results_channel.mention} channel. You challenge is logged as pending and the challenged can still Accept your challenge.")
+            await interaction.followup.send(f"⚠️ Could not post to {rival_results_channel.mention}. Check bot permissions.")
+
     try:
         await view.wait()
     except Exception as e:
-        await ctx.send(f"Waiting error:{e}")
-        return 
+        await interaction.followup.send(f"❌ Error while waiting for challenge decision: {e}")
+        return
+
+    # Get PP for final message
     try:
-        challenger_pp = await get_pp(discord_username = challenger.name,)
-        challenged_pp = await get_pp(discord_username= player.name)
+        challenger_pp = await get_pp(challenger.name)
+        challenged_pp = await get_pp(player.name)
     except Exception as e:
-        print(f"Error getting pp: {e}")
+        print(f"PP fetch error: {e}")
+        challenger_pp = "?"
+        challenged_pp = "?"
+
     if view.response is None:
-        await ctx.send(f"{challenger.mention}, {player.mention} did not respond in time. The challenge is voided.")
-        try:
-            stats = await challenge_declined(challenge_id)
-            if stats is None:
-                await player.send("The challenge above is no longer available. Any interaction with it might fail.")
-                return
-            await challenge_request.edit(content = f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) |{pp}PP| Declined")
-        except Exception as e:
-            await ctx.send(f"{challenger.mention}Error at challenge_decline function, please report. Error: {e}")
-            return
-        
-
-    elif view.response is True:
-        try:
-            status = await challenge_accepted(challenge_id)
-            if status is None:
-                await player.send("The challenge above is no longer available. Any interaction with it might fail.")
-                return
-            await ctx.send(f"{challenger.mention}, {player.mention} accepted your challenge! Type `!show rivals` to view ongoing challenges.")
-            if rival_results_channel:
-                await challenge_request.edit(content=f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) |{pp}PP| Unfinished")
-        except Exception as e:
-            await ctx.send(f"An error occurred at challenge accepted: {e}")
-
-
-
+        await interaction.followup.send(f"❌ {player.display_name} didn’t respond in time. Challenge expired.")
+        if challenge_request:
+            await challenge_request.edit(content=f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) | {pp}PP | ❌ No Response")
+        await challenge_declined(challenge_id)
+    elif view.response:
+        await interaction.followup.send(f"✅ {player.mention} accepted your challenge! Type `/show rivals` to view it.")
+        await challenge_accepted(challenge_id)
+        if challenge_request:
+            await challenge_request.edit(content=f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) | {pp}PP | ⏳ Unfinished")
     else:
-        await ctx.send(f"{challenger.mention}, {player.mention} has declined your challenge.")
-        await challenge_request.edit(content = f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp})|{pp}PP|Declined")
-        try:
-            stats = await challenge_declined(challenge_id)
-            if stats is None:
-                await player.send("The challenge above is no longer available. Any interaction with it might fail.")
-                return
-            await challenge_request.edit(content = f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp})|{pp}PP|Declined")
-        except Exception as e:
-            await ctx.send(f"{challenger.mention}Error at challenge_decline function, please report. Error: {e}")
-            return
-        
-@challenge.error
-async def challenge_error(ctx, error):
-    if isinstance(error, commands.CommandOnCooldown):
-        retry_after = error.retry_after
-        await ctx.send(f"You are on cooldown for !challenge. Try again in {retry_after:.2f} seconds.")
+        await interaction.followup.send(f"❌ {player.display_name} declined your challenge.")
+        if challenge_request:
+            await challenge_request.edit(content=f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) | {pp}PP | ❌ Declined")
+        await challenge_declined(challenge_id)
+

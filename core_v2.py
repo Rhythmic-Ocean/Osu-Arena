@@ -39,6 +39,8 @@ client_secret = os.getenv("AUTH_TOKEN")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
+GUILD = discord.Object(id=GUILD_ID)
+
 
 
 redirect_url = "https://rt4d-production.up.railway.app/"
@@ -93,6 +95,11 @@ CHALLENGE_STATUS={
     3: "Unfinished",
     4: "Finished",
     5: "Revoked"
+}
+
+SEASON_STATUS={
+    1: "Ongoing",
+    2: "Archive"
 }
 
 class ChallengeView(View):
