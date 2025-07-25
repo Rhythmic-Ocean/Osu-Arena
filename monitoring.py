@@ -121,9 +121,10 @@ async def monitor_new_user(bot):
 async def give_role_nickname (discord_id, league, guild, osu_username):
     member = await guild.fetch_member(discord_id)
     role = discord.utils.get(guild.roles, name = league.capitalize())
-
+    role_part = discord.utils.get(guild.roles, name = 'Participant')
     try:
         await member.add_roles(role)
+        await member.add_roles(role_part)
     except Exception as e:
         logging.error(f"Error adding role: {e}")
         print(f"Error adding role: {e}")
