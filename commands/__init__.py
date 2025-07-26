@@ -1,1 +1,1 @@
-from . import challenge, help, link, session_restart, show, revoke_challenge
+from . import challenge, help, link, session_restart, show, revoke_challenge, archived

@@ -3,7 +3,7 @@ import discord
 
 bot.remove_command('help')
 
-@bot.tree.command(name = "help", description="Shows all available commands", guild=GUILD)
+@bot.tree.command(name="help", description="Shows all available commands", guild=GUILD)
 async def help(interaction: discord.Interaction):
     embed = discord.Embed(
         title="📘 Bot Help Menu",
@@ -23,6 +23,16 @@ async def help(interaction: discord.Interaction):
         value="Shows the table for a specific league.\n"
               "Example: `/show league:Bronze`, `/show league:Silver`, or `/show league:Rivals`\n"
               "Available leagues: `Bronze, Silver, Gold, Platinum, Diamond, Elite, Ranker, Master, Rivals`",
+        inline=False
+    )
+
+    embed.add_field(
+        name="📂 /archived [season] [league]",
+        value="View archived tables from previous seasons.\n"
+              "- **season**: Season number (integer).\n"
+              "- **league**: League name (e.g., Bronze, Silver, Gold).\n"
+              "Example: `/archived season:1 league:Bronze`\n"
+              "Only works for **finished** seasons.",
         inline=False
     )
 

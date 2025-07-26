@@ -99,7 +99,9 @@ CHALLENGE_STATUS={
 
 SEASON_STATUS={
     1: "Ongoing",
-    2: "Archive"
+    2: "Archived",
+    3: "DNE",
+    4: "Error"
 }
 
 class ChallengeView(View):
@@ -509,6 +511,20 @@ async def get_discord_id(username):
         logging.error(f"Error at get_discord_id: {e}")
         print(f"Error at get_discord_id: {e}")
         return None
+
+async def exist_archive(seash: int):
+    supabase = await create_supabase()
+    try:
+        query = await supabase.table('seasons').select('status').eq('season', seash).execute()
+        result = query.data[0]['status']
+        print(result)
+        if result == None:
+            return "DNE"
+        return result
+    except Exception as e:
+        logging.error(f"Error at getting seassion archives:{e}")
+        print(f"Error at getting session archives: {e}")
+        return "Error"
 
 
 
