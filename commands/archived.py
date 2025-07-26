@@ -1,5 +1,5 @@
 import discord
-from core_v2 import bot, SEASON_STATUS, GUILD, exist_archive, TABLE_MODES, get_table_data,render_table_image
+from core_v2 import bot, SEASON_STATUS, GUILD, exist_archive, TABLE_MODES, get_table_data,render_table_image, CHALLENGE_STATUS
 from discord import app_commands
 
 @bot.tree.command(name="archived", description="Shows archived tables", guild=GUILD)
@@ -13,22 +13,34 @@ async def archived(interaction: discord.Interaction, season: int, league: str):
         return
 
     await interaction.response.defer()
-    status = await exist_archive(seash=season)
-    if status == SEASON_STATUS[3]:
-        await interaction.followup.send("❌ Such a session Does Not Exist", ephemeral=True)
-        return
-    elif status == SEASON_STATUS[4]:
-        await interaction.followup.send("❌ Error occurred processing request, please contact the admins", ephemeral=True)
-        return
-    elif status == SEASON_STATUS[1]:
-        await interaction.followup.send("❌ This session is ongoing, please use !show command.", ephemeral=True)
-        return
+    if leag == TABLE_MODES[9]:
+        if season != 0:
+            await interaction.followup.send(
+                "❌ Season 0 is the only valid season for Rivals League."
+            )
+            return
+        
+    else: 
+        status = await exist_archive(seash=season)
+        print(status)
+        if status == SEASON_STATUS[3]:
+            await interaction.followup.send("❌ Invalid season.")
+            return
+        elif status == SEASON_STATUS[4]:
+            await interaction.followup.send("❌ Error occurred processing request, please contact the admins")
+            return
+        elif status == SEASON_STATUS[1]:
+            await interaction.followup.send("❌ This session is ongoing, please use !show command.")
+            return
 
     le = leag.lower()
     st = le + "_" + str(season)
     print(st)
     try:
-        headers, rows = await get_table_data(st)
+        if leag == TABLE_MODES[9]:
+            headers, rows = await get_table_data(le, stat= CHALLENGE_STATUS[4])
+        else:
+            headers, rows = await get_table_data(st)
     except Exception as e:
         print(f"error: {e}")
         await interaction.followup.send(content="⚠️ Failed to load data.", ephemeral=True)
@@ -40,7 +52,10 @@ async def archived(interaction: discord.Interaction, season: int, league: str):
 
     image_buf = render_table_image(headers, rows)
     file = discord.File(fp=image_buf, filename="table.png")
-    embed = discord.Embed(title=f"{leag} League - Season {season}")
+    if season == 0:
+        embed = discord.Embed(title="Rivals - Archived")
+    else: 
+        embed = discord.Embed(title=f"{leag} League - Season {season}")
     embed.set_image(url="attachment://table.png")
     try:
         await interaction.followup.send(embed=embed, file=file)

@@ -28,11 +28,12 @@ async def help(interaction: discord.Interaction):
 
     embed.add_field(
         name="📂 /archived [season] [league]",
-        value="View archived tables from previous seasons.\n"
+        value="View archived tables from previous seasons/ finished challenges.\n"
               "- **season**: Season number (integer).\n"
-              "- **league**: League name (e.g., Bronze, Silver, Gold).\n"
-              "Example: `/archived season:1 league:Bronze`\n"
-              "Only works for **finished** seasons.",
+              "- **league**: League name (e.g., Bronze, Silver, Gold, Rivals).\n"
+              "- **Note**: season:0 is the only valid value for leag:Rivals\n"
+              "Examples: `/archived season:1 lea:Bronze, /archived season:0 leag:Rivals`\n"
+              "Only works for **finished** seasons and challenges.",
         inline=False
     )
 

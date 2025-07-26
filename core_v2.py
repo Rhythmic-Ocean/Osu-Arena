@@ -179,7 +179,7 @@ async def get_pp(osu_username :str = None, discord_username :str = None) -> int|
             return None
 
 
-async def get_table_data(leag):
+async def get_table_data(leag, stat = None):
     league = leag.lower()
     supabase = await create_supabase()
     if league == "rivals":
@@ -189,7 +189,10 @@ async def get_table_data(leag):
             print(f"error as sync rivals: {e}")
             return
         try:
-            response = await supabase.table(league).select("challenger, challenged, challenger_stats, challenged_stats").eq("challenge_status", CHALLENGE_STATUS[3]).order("challenge_id", desc= False).execute()
+            if stat == CHALLENGE_STATUS[4]:
+                response = await supabase.table(league).select("challenger, challenged, for_pp, winner, challenge_status").eq("challenge_status", CHALLENGE_STATUS[4]).order("challenge_id", desc= False).execute()
+            else:
+                response = await supabase.table(league).select("challenger, challenged, challenger_stats, challenged_stats").eq("challenge_status", CHALLENGE_STATUS[3]).order("challenge_id", desc= False).execute()
         except Exception as e:
             print(f"error show rivals: {e}")
             return
@@ -516,11 +519,10 @@ async def exist_archive(seash: int):
     supabase = await create_supabase()
     try:
         query = await supabase.table('seasons').select('status').eq('season', seash).execute()
-        result = query.data[0]['status']
-        print(result)
-        if result == None:
+        if not query.data:  
             return "DNE"
-        return result
+        result = query.data[0].get('status')
+        return result 
     except Exception as e:
         logging.error(f"Error at getting seassion archives:{e}")
         print(f"Error at getting session archives: {e}")
