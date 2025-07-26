@@ -13,39 +13,75 @@
 - ⚔️ **Rivalry & Challenge System** – Issue & manage direct 1v1 challenges with real-time updates.
 - 🕒 **Live PP & Rank Updates** – Every player’s rank & pp is updated constantly in the database.
 - 🔁 **Session Resets** – Admins can restart sessions to reassign league brackets.
+- 📂 **Archived Seasons & Challenges** – Access previous seasons and completed rivalries via `/archived` command.
 - 📣 **Winner Announcements** – Rivalry winners are automatically detected and announced.
 - ⚡ **Asynchronous Architecture** – Uses `asyncio` and parallel modules for optimal performance.
 - 🌐 **OAuth Landing Page** – Hosted with Railway to handle account linking & redirection.
 
 ---
 
-## 🧠 Commands
+## 🧠 Commands (Help Menu)
 
-- 🆘 `!help`  
-  Shows all available commands.
+The bot uses **slash commands** for a cleaner experience. Here’s what you can do:
 
-- 🔗 `!link`  
-  Link your osu! account securely via OAuth2.  
-  _(All users registered before June 18, 2025, 22:50 CDT were linked manually.)_
+---
 
-- 📊 `!show [league]`  
-  View current standings in a league.  
-  Examples:
-  - `!show Bronze`
-  - `!show Rivals`
-  - `!show` (to list valid leagues)
+### 🔗 `/link`  
+Link your osu! account securely via OAuth2.  
+_All users signed up before **June 18, 2025, 22:50 CDT** were linked manually._
 
-- ⚔️ `!challenge @user <pp>`  
-  Challenge a rival in your league.
-  - PP must be 250–750  
-  - Max 3 active challenges  
-  - You may not challenge the same user twice a day
+---
 
-- ❌ `!revoke_challenge @user`  
-  Cancel a pending challenge (before acceptance).
+### 📊 `/show [league]`  
+Shows the table for a specific league.  
+Examples:  
+- `/show league:Bronze`  
+- `/show league:Silver`  
+- `/show league:Rivals`  
 
-- 🛠️ `!session_restart`  
-  **Admin-only** – Reassigns all users to leagues based on updated ranks.
+Available leagues:  
+`Bronze, Silver, Gold, Platinum, Diamond, Elite, Ranker, Master, Rivals`
+
+---
+
+### 📂 `/archived [season] [league]`  
+View archived tables from previous seasons or finished challenges.  
+- **season**: Season number (integer).  
+- **league**: League name (e.g., Bronze, Silver, Gold, Rivals).  
+- **Note**: `season:0` is the only valid value for `leag:Rivals`.  
+
+Examples:  
+- `/archived season:1 leag:Bronze`  
+- `/archived season:0 leag:Rivals`  
+
+Works only for **finished** seasons and challenges.
+
+---
+
+### ⚔️ `/challenge @user <pp>`  
+Challenge a player in your league for a match.  
+- Max **3 active** challenges  
+- PP must be **250–750**  
+- You can’t challenge the same player **more than once a day**  
+- The challenged player gets a DM to accept/decline  
+
+Example:  
+`/challenge player:@Rhythmic_Ocean pp:700`
+
+---
+
+### ❌ `/revoke_challenge @user`  
+Revoke a pending challenge you issued.  
+- Only **unaccepted (pending)** challenges can be revoked  
+- If the challenge has been accepted, it **cannot** be revoked  
+
+Example:  
+`/revoke_challenge player:@Rhythmic_Ocean`
+
+---
+
+### 🛠️ `!session_restart`  
+Admin-only command to reset the current session and reassign users to leagues.
 
 ---
 
@@ -123,11 +159,3 @@ SUPABASE_KEY=your_supabase_service_role_key        # Use service key for full ac
 # Web/OAuth
 FLASK_SECKEY=your_flask_secret_key                 # Flask session encryption
 SEC_KEY=your_discord_encryption_secret             # Used to securely encrypt Discord usernames/IDs (min 10 chars recommended)
-```
-
-▶️ Running Locally
-
-pip install -r requirements.txt
-python auth.py       # to start the bot
-python web.py        # to start OAuth web app
-python supaabse.py   # to sync pp/rank with Supabase
