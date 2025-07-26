@@ -1,8 +1,8 @@
-# 🌀 rt4d Discord Bot
+# 🌀 osu!Arena Discord Bot
 
 > [🌐 Website](https://rt4d-production.up.railway.app) | [💬 Join the Discord](https://discord.com/invite/GBsNU5hCQy)
 
-**rt4d (Race to 4 Digits)** is a custom-built, real-time Discord bot designed for the **osu! community** at rt4d. It manages league sessions, rivalries, challenges, player verification, and rank syncing for a competitive community racing to reach 4-digit osu! global rank and beyond.
+**osu!Arena** is a custom-built, real-time Discord bot designed for the **osu! community** at osu!Arena. It manages league sessions, rivalries, challenges, player verification, and rank syncing for a competitive community racing to reach 4-digit osu! global rank and beyond.
 
 ---
 
@@ -120,11 +120,13 @@ Admin-only command to reset the current session and reassign users to leagues.
 
 > All major modules are deployed separately for scalability:
 
-| Component      | Role                                           | Deployment        |
-|----------------|------------------------------------------------|-------------------|
-| `auth.py`      | Main Discord bot runtime                       | Railway (Bot Host)|
-| `web.py`       | OAuth2 account linking + redirect handling     | Railway (Web App) |
-| `supaabse.py`  | PP/Rank sync for all tracked users             | Railway (Worker)  |
+|    Component   |                    Role                        |           Deployment             |
+|----------------|------------------------------------------------|----------------------------------|
+| `auth.py`      | Main Discord bot runtime                       | Railway (Bot Host)               |
+| `web.py`       | OAuth2 account linking + redirect handling     | Railway (Web App)                |
+| `supaabse.py`  | PP/Rank sync for all tracked users             | Pythonanywhere/ cron-job (Worker)|
+
+
 
 ---
 
