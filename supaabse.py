@@ -78,7 +78,7 @@ def update_pp():
                     "future_league": league,
                     "ii" : ii
                 }).eq("osu_id", osu_id).execute()
-                print(f"{username}'s osu! pp: {pp}, rank: {rank} updated.")
+                print(f"{username}'s osu! pp: {pp}, rank: {rank} updated. League: {league}")
             except Exception as e:
                 print(f"Failed to update {osu_id}: {e}")
 

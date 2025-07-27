@@ -12,6 +12,10 @@ async def show(interaction: discord.Interaction, leag: str):
                 "❌ Invalid league name. Use one of: " + ", ".join(TABLE_MODES.values()), ephemeral=True
             )
         return
+    if league == TABLE_MODES[7]:
+        await interaction.response.send_message(
+            "⚠ Ranker league has unfortunatly been deprecated."
+        )
     await interaction.response.defer()
     try:
         headers, rows = await get_table_data(league.lower())

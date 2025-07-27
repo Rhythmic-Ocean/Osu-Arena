@@ -64,6 +64,7 @@ LEAGUE_MODES = {
     6: "elite",
     7: "ranker",
     8: "master",
+    9: "novice"
 }
 
 ROLE_MODES = {
@@ -75,6 +76,7 @@ ROLE_MODES = {
     6: "Elite",
     7: "Ranker",
     8: "Master",
+    9: "Novice",
 }
 
 TABLE_MODES = {
@@ -86,7 +88,8 @@ TABLE_MODES = {
     6: "Elite",
     7: "Ranker",
     8: "Master",
-    9: "Rivals"
+    9: "Rivals",
+    10: "Novice",
 }
 
 CHALLENGE_STATUS={
@@ -490,7 +493,8 @@ async def update_leagues():
             osu_uname = await get_osu_uname(discord_uname=uname)
             pp = await get_pp(discord_username=uname)
             print(f"{osu_uname}, {pp}")
-            await supabase.table(league).delete().eq('discord_username', uname).execute()
+            if league != TABLE_MODES[7]:
+                await supabase.table(league).delete().eq('discord_username', uname).execute()
             await supabase.table(future_league).insert([{
                 'discord_username': uname,
                 'osu_username': osu_uname,

@@ -24,13 +24,13 @@ auth = AuthHandler(client_id, client_secret, redirect_url, Scope.identify())
 
 LEAGUE_MODES = {
     1000: "master",
-    5000: "ranker",
-    10000: "elite",
-    20000: "diamond",
-    50000: "platinum",
-    100000: "gold",
-    250000: "silver",
-    sys.maxsize: "bronze",
+    3000: "elite",
+    10000: "diamond",
+    30000: "platinum",
+    80000: "gold",
+    150000: "silver",
+    250000: "bronze",
+    sys.maxsize: "novice",
 }
 
 @app.route("/")

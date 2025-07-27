@@ -8,10 +8,10 @@ import discord
 async def session_restart(ctx):
     person = None
 
-    for league in LEAGUE_MODES.values():
-        msg = await ctx.send(f"⏳ Starting new session for **{league} League**. Please wait...")
-        await update_init_pp(league)
-        await msg.edit(content=f"✅ Session successfully reinitiated for **{league} League**")
+    #for league in LEAGUE_MODES.values():
+     #   msg = await ctx.send(f"⏳ Starting new session for **{league} League**. Please wait...")
+      #  await update_init_pp(league)
+       # await msg.edit(content=f"✅ Session successfully reinitiated for **{league} League**")
 
     try:
         players = await update_leagues()
