@@ -23,10 +23,8 @@ async def monitor_database(bot, channel_id):
             except Exception as e:
                 print("Exception as {}",e)
 
-            print("hello?")
 
             for data in datas:
-                print(data)
                 if data['for_pp'] <= data['challenger_stats']:
                     winner = data['challenger']
                     result = await win(winner, data['challenge_id'])

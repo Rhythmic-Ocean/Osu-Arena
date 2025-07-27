@@ -7,9 +7,6 @@ import discord
 @has_role(s_role)
 async def session_restart(ctx):
     person = None
-    loader = await ctx.send("⏳ Backing up previous session...")
-    foldername = await backup_database()
-    await loader.edit(content=f"✅ Previous session database backed up in {foldername}")
 
     for league in LEAGUE_MODES.values():
         msg = await ctx.send(f"⏳ Starting new session for **{league} League**. Please wait...")
