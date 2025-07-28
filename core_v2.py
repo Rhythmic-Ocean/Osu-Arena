@@ -195,7 +195,7 @@ async def get_table_data(leag, stat = None):
             if stat == CHALLENGE_STATUS[4]:
                 response = await supabase.table(league).select("challenger, challenged, for_pp, winner, challenge_status").eq("challenge_status", CHALLENGE_STATUS[4]).order("challenge_id", desc= False).execute()
             else:
-                response = await supabase.table(league).select("challenger, challenged, challenger_stats, challenged_stats").eq("challenge_status", CHALLENGE_STATUS[3]).order("challenge_id", desc= False).execute()
+                response = await supabase.table(league).select("challenger, challenged, challenger_stats, challenged_stats, for_pp").eq("challenge_status", CHALLENGE_STATUS[3]).order("challenge_id", desc= False).execute()
         except Exception as e:
             print(f"error show rivals: {e}")
             return
