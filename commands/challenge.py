@@ -15,21 +15,33 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
     challenger = interaction.user
 
     if challenger.id == player.id:
-        await interaction.response.send_message("❌ You cannot challenge yourself!", ephemeral=True)
+        await interaction.response.send_message("❌ You cannot challenge yourself!")
         return
 
     if not (MIN_PP <= pp <= MAX_PP):
-        await interaction.response.send_message("❌ PP must be between 250 and 750.", ephemeral=True)
+        await interaction.response.send_message("❌ PP must be between 250 and 750.")
         return
+    
+    await interaction.response.defer()
 
     try:
-        number_of_challenges = await check_challenger_challenges(challenger)
+        number_of_challenges = await check_challenger_challenges(challenger.name)
     except Exception as e:
-        await interaction.response.send_message(f"❌ Error while checking challenges: {e}", ephemeral=True)
+        await interaction.followup.send(f"❌ Error while checking challenges: {e}")
         return
 
     if number_of_challenges >= 3:
-        await interaction.response.send_message("❌ You already have 3 active or pending challenges.", ephemeral=True)
+        await interaction.followup.send("❌ You already have 3 active or pending challenges.")
+        return
+    try:
+        number_of_challenges = await check_challenger_challenges(player.name)
+    except Exception as e:
+        await interaction.followup.send(f"❌ Error while checking challenges: {e}")
+        return
+    n = player.mention
+
+    if number_of_challenges >= 3:
+        await interaction.followup.send(f"❌ {n} already have 3 active or pending challenges. Please challenge someone else")
         return
 
     challenger_role = None
@@ -43,20 +55,20 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
             break
 
     if not challenger_role:
-        await interaction.response.send_message("❌ You have not been assigned a league role.", ephemeral=True)
+        await interaction.followup.send("❌ You have not been assigned a league role.")
         return
     if not challenged_role:
-        await interaction.response.send_message(f"❌ {player.display_name} has not been assigned a league.")
+        await interaction.followup.send(f"❌ {player.display_name} has not been assigned a league.")
         return
     if challenged_role != challenger_role:
-        await interaction.response.send_message("❌ You can only challenge players in your own league.", ephemeral=True)
+        await interaction.followup.send("❌ You can only challenge players in your own league.")
         return
 
     # League verification
     bool1 = await check_league(challenger.name, challenger_role)
     bool2 = await check_league(player.name, challenger_role)
     if not bool1:
-        await interaction.response.send_message("❌ Your league in the DB doesn't match your role. Ask admin.", ephemeral=True)
+        await interaction.followup.send("❌ Your league in the DB doesn't match your role. Ask admin.")
         return
     if not bool2:
         await interaction.followup.send(f"⚠️ {player.mention}'s role and DB league don't match. Ask admin.")
@@ -65,7 +77,7 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
     try:
         allowance = await challenge_allowed(challenger.name, player.name, challenger_role)
     except Exception as e:
-        await interaction.response.send_message(f"❌ Error while checking allowance: {e}", ephemeral=True)
+        await interaction.followup.send(f"❌ Error while checking allowance: {e}", ephemeral=True)
         return
 
     allowance_messages = {
@@ -76,17 +88,17 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
         6: f"❌ Internal error occurred. Please contact the dev."
     }
     if allowance in allowance_messages:
-        await interaction.response.send_message(allowance_messages[allowance])
+        await interaction.followup.send(allowance_messages[allowance])
         return
 
     # Log challenge
     try:
         challenge_id = await log_rivals(challenger_role, challenger.name, player.name, pp)
     except Exception as e:
-        await interaction.response.send_message(f"❌ Error logging challenge: {e}")
+        await interaction.followup.send(f"❌ Error logging challenge: {e}")
         return
 
-    await interaction.response.send_message(f"{challenger.mention} has challenged {player.mention} for {pp}pp.")
+    await interaction.followup.send(f"{challenger.mention} has challenged {player.mention} for {pp}pp.")
 
     # Send DM to challenged player
     try:

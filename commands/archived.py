@@ -19,6 +19,17 @@ async def archived(interaction: discord.Interaction, season: int, league: str):
                 "❌ Season 0 is the only valid season for Rivals League."
             )
             return
+    
+    if leag == TABLE_MODES[10]:
+        if season == 1:
+            await interaction.followup.send(
+                "⚠ Novice League does not exist for Season 1"
+            )
+    if leag == TABLE_MODES[7]:
+        if season != 1:
+            await interaction.followup.send(
+                "⚠ Ranker League does not exist for Season {season}. It was deprecated after Season 1."
+            )
         
     else: 
         status = await exist_archive(seash=season)
@@ -47,7 +58,7 @@ async def archived(interaction: discord.Interaction, season: int, league: str):
         return
 
     if not rows:
-        await interaction.followup.send(content="⚠️ This table is empty.", ephemeral=True)
+        await interaction.followup.send(content="⚠ This table is empty.", ephemeral=True)
         return
 
     image_buf = render_table_image(headers, rows)
