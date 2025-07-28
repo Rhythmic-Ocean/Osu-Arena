@@ -142,13 +142,13 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
     if view.response is None:
         await interaction.followup.send(f"❌ {player.display_name} didn’t respond in time. Challenge expired.")
         if challenge_request:
-            await challenge_request.edit(content=f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) | {pp}PP | ❌ No Response")
+            await challenge_request.edit(content=f"{challenger.mention} vs {player.mention} | {pp}PP | Pending")
         await challenge_declined(challenge_id)
     elif view.response:
         await interaction.followup.send(f"✅ {player.mention} accepted your challenge! Type `/show rivals` to view it.")
         await challenge_accepted(challenge_id)
         if challenge_request:
-            await challenge_request.edit(content=f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) | {pp}PP | ⏳ Unfinished")
+            await challenge_request.edit(content=f"{challenger.mention} vs {player.mention} | {pp}PP | ⏳ Unfinished")
     else:
         await interaction.followup.send(f"❌ {player.display_name} declined your challenge.")
         if challenge_request:

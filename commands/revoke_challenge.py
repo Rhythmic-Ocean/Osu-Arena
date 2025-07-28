@@ -7,10 +7,11 @@ from discord import app_commands
 async def revoke_challenge(interaction: discord.Interaction, player: discord.Member):
     challenger = interaction.user
     challenged = player
+    await interaction.response.defer()
 
     checking = await check_pending(challenger.name, challenged.name)
     if checking is None:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"{challenger.mention}, you have no pending challenges with {challenged.mention}."
         )
         return
@@ -20,16 +21,16 @@ async def revoke_challenge(interaction: discord.Interaction, player: discord.Mem
             msg_id = await get_msg_id(checking)
             channel = bot.get_channel(RIVAL_RESULTS_ID)
             if channel is None:
-                await interaction.response.send_message("Could not find the #rival-result channel.")
+                await interaction.followup.send("Could not find the #rival-result channel.")
                 return
             msg = await channel.fetch_message(msg_id)
             await msg.edit(content=f"{challenger.mention} vs {player.mention} | Challenge Revoked")
         except Exception as e:
-            await interaction.response.send_message(f"Failed to update message in #rival-result. Error: {e}")
+            await interaction.followup.send(f"Failed to update message in #rival-result. Error: {e}")
             return
 
         await revoke_success(checking)
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"{challenger.mention}, your challenge to {challenged.mention} has been revoked successfully."
         )
 
@@ -43,4 +44,4 @@ async def revoke_challenge(interaction: discord.Interaction, player: discord.Mem
             )
 
     except Exception as e:
-        await interaction.response.send_message(f"Error in challenge deletion: {e}")
+        await interaction.followup.send(f"Error in challenge deletion: {e}")
