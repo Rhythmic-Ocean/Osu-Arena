@@ -14,6 +14,7 @@ import pandas as pd
 import aiofiles 
 import matplotlib.pyplot as plt
 from io import BytesIO
+from sys import stderr
 
 from supabase._async.client import AsyncClient, create_client
 
@@ -538,6 +539,19 @@ async def exist_archive(seash: int):
         logging.error(f"Error at getting seassion archives:{e}")
         print(f"Error at getting session archives: {e}")
         return "Error"
+
+
+async def is_in(id: int) -> bool:
+    supabase = await create_supabase()
+    try:
+        query = await supabase.table('discord_osu').select('osu_username'). eq('discord_id', id).execute()
+        if not query.data:
+            return False
+        return True
+    except Exception as e:
+        stderr(f"Error at is_in {e}")
+
+
 
 
 

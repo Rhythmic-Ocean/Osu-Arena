@@ -121,6 +121,9 @@ async def give_role_nickname (discord_id, league, guild, osu_username):
     role = discord.utils.get(guild.roles, name = league.capitalize())
     role_part = discord.utils.get(guild.roles, name = 'Participant')
     try:
+        for role in member.roles:
+            if role.name != "@everyone":
+                await member.remove_roles(role)
         await member.add_roles(role)
         await member.add_roles(role_part)
     except Exception as e:
