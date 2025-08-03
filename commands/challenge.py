@@ -124,26 +124,37 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
         except discord.Forbidden:
             await interaction.followup.send(f"⚠️ Could not post to {rival_results_channel.mention}. Check bot permissions.")
 
+
+    # Get PP for final message
+    try:
+        challenger_pp = await get_pp(discord_username=challenger.name)
+        challenged_pp = await get_pp(discord_username=player.name)
+    except Exception as e:
+        print(f"PP fetch error: {e}")
+        challenger_pp = "?"
+        challenged_pp = "?"
     try:
         await view.wait()
     except Exception as e:
         await interaction.followup.send(f"❌ Error while waiting for challenge decision: {e}")
         return
 
-    # Get PP for final message
-    try:
-        challenger_pp = await get_pp(challenger.name)
-        challenged_pp = await get_pp(player.name)
-    except Exception as e:
-        print(f"PP fetch error: {e}")
-        challenger_pp = "?"
-        challenged_pp = "?"
-
     if view.response is None:
-        await interaction.followup.send(f"❌ {player.display_name} didn’t respond in time. Challenge expired.")
-        if challenge_request:
-            await challenge_request.edit(content=f"{challenger.mention} vs {player.mention} | {pp}PP | Pending")
-        await challenge_declined(challenge_id)
+        try:
+            await revoke_success(challenge_id)      
+            await interaction.followup.send(f"❌ {player.mention} didn’t respond in time. Challenge expired.")
+            if challenge_request:
+                try:
+                    await challenge_request.edit(content=f"{challenger.mention} vs {player.mention} | Revoked")
+                except discord.Forbidden:
+                    await interaction.followup.send(f"⚠️ Could not edit challenge message in {rival_results_channel.mention}. Check bot permissions.")
+                except Exception as e:
+                    await interaction.followup.send(f"❌ Error editing challenge message: {e}")
+        except discord.errors.InteractionResponded:
+            print(f"Interaction already responded for challenge {challenge_id}. Skipping followup.")
+        except Exception as e:
+            await interaction.followup.send(f"❌ Error handling challenge timeout: {e}")
+    
     elif view.response:
         await interaction.followup.send(f"✅ {player.mention} accepted your challenge! Type `/show rivals` to view it.")
         await challenge_accepted(challenge_id)

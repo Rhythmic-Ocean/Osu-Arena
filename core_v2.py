@@ -164,23 +164,36 @@ async def backup_database():
 
 
 
-async def get_pp(osu_username :str = None, discord_username :str = None) -> int|None:
+
+async def get_pp(osu_username: str = None, discord_username: str = None) -> int | None:
     supabase = await create_supabase()
+
     if osu_username:
         try:
-            response = await supabase.table('discord_osu').select("current_pp").eq('osu_username',osu_username ).execute()
-            return response.data[0]['current_pp']
+            response = await supabase.table('discord_osu').select("current_pp").eq('osu_username', osu_username).execute()
+            if response.data and len(response.data) > 0:
+                return response.data[0]['current_pp']
+            else:
+                logging.warning(f"[get_pp] No data found for osu_username: {osu_username}")
+                return None
         except Exception as e:
-            logging.error(f"First error at get_pp: {e}")
+            logging.error(f"[get_pp] Error while fetching by osu_username ({osu_username}): {e}")
             return None
 
     if discord_username:
         try:
             response = await supabase.table('discord_osu').select("current_pp").eq("discord_username", discord_username).execute()
-            return response.data[0]['current_pp']
+            if response.data and len(response.data) > 0:
+                return response.data[0]['current_pp']
+            else:
+                logging.warning(f"[get_pp] No data found for discord_username: {discord_username}")
+                return None
         except Exception as e:
-            logging.error(f"Second error at get_pp: {e}")
+            logging.error(f"[get_pp] Error while fetching by discord_username ({discord_username}): {e}")
             return None
+
+    logging.warning("[get_pp] No username provided.")
+    return None
 
 
 async def get_table_data(leag, stat = None):
@@ -388,11 +401,15 @@ async def challenge_declined(id):
         logging.error(f"Error at challenge_declined: {e}")
 
 async def revoke_success(id):
+    print("Here at revoked")
     supabase = await create_supabase()
     try:
         await supabase.table('rivals').update({"challenge_status": CHALLENGE_STATUS[5]}).eq("challenge_id", id).execute()
+        print("revoked_suc?")
     except Exception as e:
         logging.error(f"Error at challenge_revoked: {e}")
+        print(f"Error at challenge_revoked: {e}")
+
 
 
 async def store_msg_id(challenge_id, msg_id):
