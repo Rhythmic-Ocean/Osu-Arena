@@ -121,14 +121,14 @@ async def give_role_nickname (discord_id, league, guild, osu_username):
     role = discord.utils.get(guild.roles, name = league.capitalize())
     role_part = discord.utils.get(guild.roles, name = 'Participant')
     try:
-        for role in member.roles:
-            if role.name != "@everyone":
-                await member.remove_roles(role)
+        for role_m in member.roles:
+            if role_m.name == "Inactive":
+                await member.remove_roles(role_m)
         await member.add_roles(role)
         await member.add_roles(role_part)
     except Exception as e:
-        logging.error(f"Error adding role: {e}")
-        print(f"Error adding role: {e}")
+        logging.error(f"Error adding/ removing roles: {e}")
+        print(f"Error adding/ removing roles role: {e}")
 
     try:
         await member.edit(nick = osu_username)
