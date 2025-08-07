@@ -34,10 +34,13 @@ async def update(ctx):
         await ctx.send("All players have been reassigned to leagues based on their current rankings. If you find any mistakes in your positioning, please inform.")
 
     except Exception as e:
-        await ctx.send(f"CRITICAL ERROR updating leagues: {e}")
+        await ctx.send(f"CRITICAL ERROR at update.py: {e}")
         print(f"error:{e}")
         return
     
+    await ctx.send("🎉 All leagues have been successfully reinitiated!")
+
+    await ctx.send("🏆 Good luck to all players!")
 
 
 @update.error 
