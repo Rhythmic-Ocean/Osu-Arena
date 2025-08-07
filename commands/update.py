@@ -38,9 +38,6 @@ async def update(ctx):
         print(f"error:{e}")
         return
     
-    await ctx.send("🎉 All leagues have been successfully reinitiated!")
-
-    await ctx.send("🏆 Good luck to all players!")
 
 
 @update.error 
