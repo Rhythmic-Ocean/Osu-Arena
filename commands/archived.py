@@ -25,12 +25,13 @@ async def archived(interaction: discord.Interaction, season: int, league: str):
             await interaction.followup.send(
                 "⚠ Novice League does not exist for Season 1"
             )
+            return
     elif leag == TABLE_MODES[7]:
         if season != 1:
             await interaction.followup.send(
                 "⚠ Ranker League does not exist for Season {season}. It was deprecated after Season 1."
             )
-        
+            return
     else: 
         status = await exist_archive(seash=season)
         print(status)
