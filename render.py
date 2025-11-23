@@ -18,50 +18,62 @@ def render_table_image(headers, rows):
     fig = None 
 
     try:
+        plt.rcParams["font.family"] = "sans-serif"
         # Create the figure
         fig, ax = plt.subplots(figsize=(fig_width, fig_height))
         
         fig.set_facecolor('black')
         ax.axis('off')
+        # ... inside your try block ...
 
         Table(
             df,
-            ax=ax,  
-            index_col= first_col_name,
+            ax=ax,
+            index_col=first_col_name,
+            
+            # Global text settings
             textprops={
                 'fontsize': 14, 
                 'color': 'white',
-                'ha': 'center'
+                'ha': 'center',
+                'family': 'sans-serif' # cleaner font
             },
+            
             column_definitions=[
+                # Use the variable 'first_col_name' to avoid errors matching the index
                 ColumnDefinition(
-                    name="osu_username", # Now this works because we named it in Step 1
+                    name=first_col_name, 
                     textprops={"weight": "bold", "ha": "left"},
                     width = 1.2
                 ),
                 ColumnDefinition(
-                    name = "challenger",
+                    name="challenger",
                     textprops={"weight": "bold", "ha": "left"},
                     width = 1.2
                 ),
                 ColumnDefinition(
-                    name = "challenged",
+                    name="challenged",
                     textprops={"weight": "bold", "ha": "left"},
                     width = 1.2
                 )
             ],
-            # Header Box Style (Pink)
+            
+            # Header Style (Deep Pink)
             col_label_cell_kw={
-                'facecolor': '#FF69B4', 
+                'facecolor': '#FF69B4',  # A nicer, deeper pink
                 'edgecolor': 'white', 
+                'linewidth': 1.5,        # Thicker border
             },
-            # Body Box Style (Borders)
+            
+            # Body Style (White Borders)
             cell_kw={
                 'edgecolor': 'white', 
+                'linewidth': 1.5         # Thicker border
             },
-            # FIX 2: Dark Backgrounds so White text is visible
-            odd_row_color='#000000',  # Black
-            even_row_color='#222222'  # Dark Gray
+            
+            # Alternating Backgrounds
+            odd_row_color='#000000', 
+            even_row_color='#222222' 
         )
         buf = BytesIO()
         plt.savefig(buf, format='png', bbox_inches='tight', dpi=250, facecolor=fig.get_facecolor())
