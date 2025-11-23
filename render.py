@@ -6,9 +6,10 @@ from plottable import Table, ColumnDefinition
 def render_table_image(headers, rows):
 
     df = pd.DataFrame(rows, columns=headers)
-    n_rows, n_cols = df.shape
-    df = df.set_index('osu_username')
 
+    first_col_name = df.columns[0]
+
+    n_rows, n_cols = df.shape
     # Calculate size dynamically
     fig_width = n_cols * 3
     fig_height = n_rows * 0.6 + 1
@@ -26,6 +27,7 @@ def render_table_image(headers, rows):
         Table(
             df,
             ax=ax,  
+            index_col= first_col_name,
             textprops={
                 'fontsize': 14, 
                 'color': 'white',
@@ -37,6 +39,16 @@ def render_table_image(headers, rows):
                     textprops={"weight": "bold", "ha": "left"},
                     width = 1.2
                 ),
+                ColumnDefinition(
+                    name = "challenger",
+                    textprops={"weight": "bold", "ha": "left"},
+                    width = 1.2
+                ),
+                ColumnDefinition(
+                    name = "challenged",
+                    textprops={"weight": "bold", "ha": "left"},
+                    width = 1.2
+                )
             ],
             # Header Box Style (Pink)
             col_label_cell_kw={

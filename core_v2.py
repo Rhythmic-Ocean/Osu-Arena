@@ -28,9 +28,9 @@ load_dotenv(dotenv_path="sec.env")
 token = os.getenv('DISCORD_TOKEN')
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
-RIVAL_RESULTS_ID =  1378928704121737326 # 1386091184706818220
-GUILD_ID =   1366563799569666158
-WELCOME_ID =  1366564371899224115  #1389336701310337190
+RIVAL_RESULTS_ID = os.getenv("RIVAL_RES_ID") 
+GUILD_ID   = os.getenv("MY_SERVER")
+WELCOME_ID =  os.getenv("WELCOME_ID")
 
 logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
 
