@@ -5,7 +5,6 @@ This module handles the bot's startup process, including:
 1. syncing slash commands to the specific guild.
 2. initializing background monitoring tasks.
 """
-
 import logging
 import discord
 import commands

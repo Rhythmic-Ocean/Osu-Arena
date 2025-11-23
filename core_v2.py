@@ -12,8 +12,6 @@ from dateutil import parser
 import pytz
 import pandas as pd
 import aiofiles 
-import matplotlib.pyplot as plt
-from io import BytesIO
 from sys import stderr
 
 from supabase._async.client import AsyncClient, create_client
