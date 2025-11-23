@@ -1,4 +1,4 @@
-from core_v2 import get_table_data, TABLE_MODES, bot, render_table_image, GUILD, is_in, s_role
+from core_v2 import get_table_data, TABLE_MODES, bot, GUILD, is_in, s_role
 from discord.ext import commands
 import discord
 from discord.ext.commands import has_role, MissingRole

@@ -18,20 +18,22 @@ from sys import stderr
 
 from supabase._async.client import AsyncClient, create_client
 
-load_dotenv(dotenv_path="sec.env")
-token = os.getenv('DISCORD_TOKEN')
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
+bot = commands.Bot(command_prefix = '!',intents = intents)
+
+load_dotenv(dotenv_path="sec.env")
+token = os.getenv('DISCORD_TOKEN')
+handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+
 RIVAL_RESULTS_ID =  1378928704121737326 # 1386091184706818220
-GUILD_ID = 1366563799569666158  #1389336700630732930 
+GUILD_ID =   1389336700630732930#1366563799569666158
 WELCOME_ID =  1366564371899224115  #1389336701310337190
 
 logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
 
-bot = commands.Bot(command_prefix = '!',intents = intents)
 s_role = 'admin'
 
 SEC_KEY = os.getenv("SEC_KEY")
@@ -449,37 +451,6 @@ async def check_pending(challenger, challenged):
         logging.error(f"Error at check pending: {e}")
 
 
-def render_table_image(headers, rows):
-    df = pd.DataFrame(rows, columns=headers)
-    n_rows, n_cols = df.shape
-
-    fig, ax = plt.subplots(figsize=(n_cols * 3, n_rows * 0.6 + 1))
-    fig.patch.set_facecolor('black')
-    ax.set_facecolor('black')
-    ax.axis('off')
-
-    table = ax.table(cellText=df.values, colLabels=df.columns, loc='center', cellLoc='center')
-
-    table.auto_set_font_size(False)
-    table.set_fontsize(14)
-    table.scale(1.3, 1.3)
-
-    for (row, col), cell in table.get_celld().items():
-        if row == 0:
-            cell.set_text_props(weight='bold', color='white', fontsize=16)
-            cell.set_facecolor('#FF69B4')  
-        else:
-            cell.set_text_props(color='white')
-            cell.set_facecolor('#222222' if row % 2 == 0 else '#000000')
-
-        cell.set_linewidth(1)
-        cell.set_edgecolor('white')
-
-    buf = BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight', dpi=250, facecolor=fig.get_facecolor())
-    buf.seek(0)
-    plt.close(fig)
-    return buf
     
 async def update_init_pp(league):
     supabase = await create_supabase()
