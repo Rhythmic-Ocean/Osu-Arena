@@ -29,7 +29,7 @@ token = os.getenv('DISCORD_TOKEN')
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
 RIVAL_RESULTS_ID = os.getenv("RIVAL_RES_ID") 
-GUILD_ID   = os.getenv("MY_SERVER")
+GUILD_ID   = os.getenv("OSU_ARENA")
 WELCOME_ID =  os.getenv("WELCOME_ID")
 
 logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
