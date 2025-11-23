@@ -29,7 +29,7 @@ token = os.getenv('DISCORD_TOKEN')
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
 RIVAL_RESULTS_ID =  1378928704121737326 # 1386091184706818220
-GUILD_ID =   1389336700630732930#1366563799569666158
+GUILD_ID =   1366563799569666158
 WELCOME_ID =  1366564371899224115  #1389336701310337190
 
 logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
