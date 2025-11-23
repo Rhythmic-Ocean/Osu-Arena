@@ -75,6 +75,10 @@ async def send_winner_announcement(bot, channel_id, result, id, pp):
 
 async def monitor_new_user(bot):
     guild = bot.get_guild(GUILD_ID)
+    if guild:
+        print(f"Found guild: {guild.name}")
+    else:
+        print("Guild not found in cache.")
     channel = guild.get_channel(WELCOME_ID)
     if channel is None:
         logging.error(f"Could not find channel with ID {WELCOME_ID}")

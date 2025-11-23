@@ -1,4 +1,4 @@
-from core_v2 import backup_database ,bot, s_role, LEAGUE_MODES, update_init_pp, update_leagues
+from core_v2 import bot, s_role, LEAGUE_MODES, update_init_pp, update_leagues
 from discord.ext import commands
 from discord.ext.commands import has_role, MissingRole
 import discord

@@ -26,9 +26,9 @@ load_dotenv(dotenv_path="sec.env")
 token = os.getenv('DISCORD_TOKEN')
 handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
 
-RIVAL_RESULTS_ID = os.getenv("RIVAL_RES_ID") 
-GUILD_ID   = os.getenv("OSU_ARENA")
-WELCOME_ID =  os.getenv("WELCOME_ID")
+RIVAL_RESULTS_ID = 1378928704121737326
+GUILD_ID   = 1366563799569666158
+WELCOME_ID = 1366564371899224115
 
 logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
 
@@ -130,39 +130,6 @@ class ChallengeView(View):
         self.response = False
         await interaction.response.send_message("You have declined the challenge.")
         self.stop()
-
-async def backup_database():
-    supabase = await create_supabase()
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
-    for _, league in LEAGUE_MODES.items():
-        try:
-            response = await supabase.table(league).select("*").execute()
-            data = response.data
-
-            if not data:
-                logging.error(f"No data found in {league}")
-                return
-            
-
-            df = pd.DataFrame(data)
-            filename = f"{league}_{timestamp}.csv"
-            df.to_csv(filename, index = False)
-
-
-            async with aiofiles.open(filename, "rb") as f:
-                contents = await f.read()
-
-
-            storage_path = f"{league}/{filename}"
-            upload_response = await supabase.storage.from_("backups").upload(storage_path, contents)
-            print(upload_response)
-        except Exception as e:
-            logging.error(f"Error backing up {league}: {e}")
-    folder = f"backup_{timestamp}"
-    return folder
-            
-
-
 
 
 async def get_pp(osu_username: str = None, discord_username: str = None) -> int | None:
