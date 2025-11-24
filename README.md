@@ -1,12 +1,12 @@
 # 🌀 osu!Arena Discord Bot
 
-> [🌐 Website](https://rt4d-production.up.railway.app) | [💬 Join the Discord](https://discord.com/invite/GBsNU5hCQy)
+> [Website](https://rt4d-production.up.railway.app) | [Join the Discord](https://discord.com/invite/GBsNU5hCQy)
 
 **osu!Arena** is a custom-built, real-time Discord bot designed for the **osu! community** at osu!Arena. It manages league sessions, rivalries, challenges, player verification, and rank syncing for a competitive community racing to reach 4-digit osu! global rank and beyond.
 
 ---
 
-## ✨ Features
+## Features
 
 - 🔗 **osu! Account Linking** – Secure OAuth2-based account verification via website.
 - 📊 **League System** – Automatically assigns users into leagues (Bronze → Master) based on osu! rank.
@@ -20,7 +20,7 @@
 
 ---
 
-## 🧠 Commands (Help Menu)
+## Commands (Help Menu)
 
 The bot uses **slash commands** for a cleaner experience. Here’s what you can do:
 
@@ -85,9 +85,9 @@ Admin-only command to reset the current session and reassign users to leagues.
 
 ---
 
-## 🗂️ Project Structure
+## Project Structure
 
-### 🔧 Main Modules (in root)
+### Main Modules (in root)
 
 - `auth.py` – **Main bot entrypoint**, handles bot startup, event handling, and async execution  
 - `core_v2.py` – Core **utility logic** behind all commands (DB ops, user logic, challenge logic)  
@@ -96,14 +96,14 @@ Admin-only command to reset the current session and reassign users to leagues.
 - `web.py` – Flask app handling **OAuth2 flow**, callback routing, and token handling  
 - `core_web.py` – Web-specific helpers used by `web.py`
 
-### 💬 Commands Folder
+### Commands Folder
 
 - `commands/` – Contains all bot `@bot.command()` implementations  
   - Relies on helper functions in `core_v2.py`
 
 ---
 
-## 🧱 Tech Stack
+## Tech Stack
 
 - **Python 3.12+**
 - **[Discord.py](https://discordpy.readthedocs.io/en/stable/)** – Discord bot framework
@@ -116,7 +116,7 @@ Admin-only command to reset the current session and reassign users to leagues.
 
 ---
 
-## 🛰️ Deployment Overview
+## Deployment Overview
 
 > All major modules are deployed separately for scalability:
 
@@ -130,7 +130,7 @@ Admin-only command to reset the current session and reassign users to leagues.
 
 ---
 
-## 🚀 Local Setup
+##  Local Setup
 
 ### 📦 Prerequisites
 
