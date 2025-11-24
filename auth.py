@@ -9,8 +9,8 @@ import logging
 import discord
 import commands
 
-from core_v2 import token, handler, bot, RIVAL_RESULTS_ID, GUILD_ID
-from monitoring import monitor_database, monitor_new_user
+from utils import token, bot, RIVAL_RESULTS_ID, GUILD_ID
+from utils import monitor_database, monitor_new_user
 
 # specific logger for this file
 log = logging.getLogger(__name__)
@@ -47,5 +47,5 @@ async def on_ready():
     print("Bot startup complete.")
 
 if __name__ == "__main__":
-    bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+    bot.run(token)
 

@@ -4,15 +4,20 @@ Table Image Rendering Utility.
 This module handles the visual generation of data tables, including:
 1. Converting raw data lists into a Pandas DataFrames
 2. Applying high-contrast styling (Dark Mode body, Pink headers) via Plottable.
-3. Exporting the final render to an in-memory BytesIO buffer and returning the rendered buffer
+3. Exporting the final render to an in-memory BytesIO buffer and returning the rendered buffer of type BytesIO
 """
 
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
 from plottable import Table, ColumnDefinition
+"""
+The variables headers and rows makes up a table. headers is just a list of strings, headers of each column, rows is a list of tuples. 
+Each of those tuple represent a row of table. 
 
-def render_table_image(headers, rows):
+The function returns memory buffer containing the table's .png file on success, or None on failure
+"""
+def render_table_image(headers : list, rows : list) -> BytesIO | None:
 
     df = pd.DataFrame(rows, columns=headers)
 

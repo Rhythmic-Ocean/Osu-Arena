@@ -1,6 +1,5 @@
 import discord
-from core_v2 import bot, SEASON_STATUS, GUILD, exist_archive, TABLE_MODES, get_table_data, CHALLENGE_STATUS
-from render import render_table_image
+from utils import bot, SEASON_STATUS, GUILD, exist_archive, TABLE_MODES, get_table_data, CHALLENGE_STATUS, render_table_image
 from discord import app_commands
 
 @bot.tree.command(name="archived", description="Shows archived tables", guild=GUILD)

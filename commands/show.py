@@ -1,5 +1,4 @@
-from core_v2 import get_table_data, TABLE_MODES, bot, GUILD
-from render import render_table_image
+from utils import get_table_data, TABLE_MODES, bot, GUILD, render_table_image
 from discord.ext import commands
 import discord
 from discord import app_commands

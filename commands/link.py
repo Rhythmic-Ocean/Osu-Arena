@@ -1,4 +1,4 @@
-from core_v2 import serializer, auth, bot, GUILD
+from utils import serializer, auth, bot, GUILD
 import discord
 from discord import app_commands
 

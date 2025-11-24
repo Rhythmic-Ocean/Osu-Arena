@@ -2,7 +2,6 @@ import os
 import logging
 from dotenv import load_dotenv
 from supabase import create_client, Client
-import time
 
 load_dotenv(dotenv_path="sec.env")
 

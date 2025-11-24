@@ -1,4 +1,4 @@
-from core_v2 import (
+from utils import (
     bot, ROLE_MODES, ChallengeView, check_challenger_challenges, challenge_accepted, get_pp,
     RIVAL_RESULTS_ID, challenge_allowed, log_rivals, challenge_declined, store_msg_id,
     check_league, revoke_success, GUILD

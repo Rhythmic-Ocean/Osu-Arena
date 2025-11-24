@@ -1,4 +1,5 @@
-from core_v2 import create_supabase, CHALLENGE_STATUS, get_discord_id, get_msg_id, GUILD_ID, WELCOME_ID
+from .core_v2 import create_supabase, CHALLENGE_STATUS, GUILD_ID, WELCOME_ID
+from .db_getter import get_discord_id, get_msg_id
 import logging
 import asyncio
 import discord

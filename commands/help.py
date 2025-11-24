@@ -1,4 +1,4 @@
-from core_v2 import bot, GUILD
+from utils import bot, GUILD
 import discord
 
 bot.remove_command('help')

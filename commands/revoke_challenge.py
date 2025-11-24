@@ -1,4 +1,4 @@
-from core_v2 import bot, check_pending, revoke_success, get_msg_id, RIVAL_RESULTS_ID, GUILD
+from utils import bot, check_pending, revoke_success, get_msg_id, RIVAL_RESULTS_ID, GUILD
 import discord
 from discord import app_commands
 
