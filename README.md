@@ -1,3 +1,4 @@
+NOTE: Doing docs starting for all functions at utils. This is taking a lot longer than anticipated!!
 # 🌀 osu!Arena Discord Bot
 
 > [Website](https://rt4d-production.up.railway.app) | [Join the Discord](https://discord.com/invite/GBsNU5hCQy)

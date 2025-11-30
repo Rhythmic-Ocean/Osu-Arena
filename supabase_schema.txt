@@ -1,0 +1,124 @@
+NOTE: PK -> Primary Key
+      FK -> Foreign Key
+
+#Core User Tables
+    These tables serve as the foundation, storing primary user information
+
+    discord_osu (Core User Data)
+    ├── discord_username (TEXT NOT NULL) [PK]
+    ├── osu_username (TEXT)
+    ├── current_pp (INTEGER)
+    ├── osu_id (BIGINT UNIQUE)
+    ├── league (TEXT)
+    ├── global_rank (BIGINT)
+    ├── future_league (TEXT)
+    ├── discord_id (BIGINT UNIQUE)
+    ├── created_at (TIMESTAMP WITH TIME ZONE)
+    └── ii (REAL)
+
+#Challenge Tables
+    These table store everything in relation to rival challenges
+
+    rivals (Challenge Metadata)
+    ├── challenge_id (SMALLINT GENERATED ALWAYS AS IDENTITY NOT NULL) [PK]
+    ├── league (TEXT)
+    ├── challenger (TEXT)
+    ├── challenged (TEXT)
+    ├── challenger_initial_pp (SMALLINT)
+    ├── challenger_final_pp (SMALLINT)
+    ├── challenged_initial_pp (SMALLINT)
+    ├── challenged_final_pp (SMALLINT)
+    ├── issued_at (TIMESTAMP WITH TIME ZONE DEFAULT now())
+    ├── challenge_status (TEXT)
+    ├── for_pp (SMALLINT)
+    ├── challenged_stats (NUMERIC DEFAULT)
+    ├── challenger_stats (NUMERIC DEFAULT)
+    └── winner (TEXT)
+
+    challenger (Users who ISSUED a challenge)
+    ├── id (INTEGER NOT NULL) [PK]
+    ├── discord_username (TEXT NOT NULL) [FK: REFERENCES discord_osu]
+    ├── osu_username (TEXT NOT NULL)
+    ├── challenge_id (INTEGER NOT NULL) [FK: REFERENCES rivals]
+    ├── initial_pp (INTEGER)
+    └── current_pp (INTEGER)
+
+    challenged (Users who RECEIVED a challenge)
+    ├── id (INTEGER NOT NULL) [PK]
+    ├── discord_username (TEXT NOT NULL) [FK: REFERENCES discord_osu]
+    ├── osu_username (TEXT NOT NULL)
+    ├── challenge_id (INTEGER NOT NULL) [FK: REFERENCES rivals]
+    ├── initial_pp (INTEGER)
+    └── current_pp (SMALLINT)
+
+    This table stores the message id from channel RIVALS_RESULT so we can later reference the id to modify the message
+    to update challenge status, usually when an unfinished/ pending challenge ends, or gets revoked
+
+    mesg_id (Challenge Message ID Tracking)
+    ├── id (SMALLINT GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE) [PK]
+    ├── msg_id (BIGINT)
+    └── challenge_id (SMALLINT) [FK: REFERENCES rivals]
+
+#League/Tier Tables
+    This group contains all the tables dedicated to tracking user progression across different tiers (Novice through Master). 
+    Note the repeated schema structure across these tables, often with suffixes _1 and _2 are for archived ones, For eg: 
+    silver_1 is the table for the final ranking for silver players during season 1.
+
+    NOTE: The historical tables with _NUMBER's discord_username are not Foreign Keys, only the ongoing table's discord usernames are foreign keys
+
+
+    novice (Current Novice Tier)
+    ├── discord_username (TEXT) [FK: REFERENCES discord_osu]
+    ├── osu_username (TEXT)
+    ├── initial_pp (SMALLINT)
+    ├── current_pp (SMALLINT)
+    ├── pp_change (INTEGER DEFAULT)
+    ├── global_rank (INTEGER)
+    ├── id (INTEGER NOT NULL) [PK]
+    ├── percentage_change (NUMERIC DEFAULT)
+    └── ii (NUMERIC)
+
+    novice_2 (Historical)
+    ├── discord_username (TEXT)
+    ├── osu_username (TEXT)
+    ├── (..other columns mirror novice..)
+    └── ii (NUMERIC)
+
+    bronze, bronze_1, bronze_2 (Bronze Tier Tables)
+    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'bronze']
+    └── (..columns mirror novice..)
+
+    silver, silver_1, silver_2 (Silver Tier Tables)
+    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'silver']
+    └── (..columns mirror novice..)
+
+    gold, gold_1, gold_2 (Gold Tier Tables)
+    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'gold']
+    └── (..columns mirror novice..)
+
+    elite, elite_1, elite_2 (Elite Tier Tables)
+    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'elite']
+    └── (..columns mirror novice..)
+
+    ranker_1 (Generic Ranker Staging/Backup) NOTE: This was only there for season one, has been deprecated since
+    │   └── (..columns mirror novice..)
+
+    platinum, platinum_1, platinum_2 (Platinum Tier Tables)
+    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'platinum']
+    └── (..columns mirror novice..)
+
+    diamond, diamond_1, diamond_2 (Diamond Tier Tables)
+    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'diamond']
+    └── (..columns mirror novice..)
+
+    master, master_1, master_2 (Master Tier Tables)
+    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'master']
+    └── (..columns mirror novice, initial_pp is INTEGER..)
+
+#Miscellaneous Tables
+This table just keeps tracks of ongoing seasons by their numbers and their status (Ongoing or Archived)
+
+seasons (Season Status)
+   ├── id (INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL) [PK]
+   ├── status (TEXT)
+   └── season (INTEGER)

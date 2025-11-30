@@ -10,6 +10,7 @@ from .core_v2 import create_supabase
 
 """
 This file includes the functions:
+<1> exist_archive(seash : int) -> str
 """
 """
 <1> exist_archive(seash : int) -> str
