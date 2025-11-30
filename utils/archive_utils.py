@@ -1,31 +1,40 @@
 """
-Utils for command /archive
-NOTE: This command uses other helper functions too. That includes get_table() from db_getter.py to fetch the table from our database
-      and render_table_image() from render.py to render our .png table image. However since they are more general functions also useful
-      for /show command, it's not kept here.
+Utilities for the /archive command.
+
+Note:
+    This module utilizes helper functions from external files:
+    - get_table() from db_getter.py: To fetch tables from the database.
+    - render_table_image() from render.py: To render .png table images.
+    These are excluded here as they are general-purpose functions also used
+    by the /show command.
 """
 
 import logging
 from .core_v2 import create_supabase
 
 """
-This file includes the functions:
-<1> exist_archive(seash : int) -> str
-"""
-"""
-<1> exist_archive(seash : int) -> str
-    
-    To check if a certain season (seash : int) has been archived. 
-    Checks the 'seasons' table from database, and checks the value on status column from seasons row.
-    If the season's number does not exist, returns "DNE"
-    If the number does exist, return it's status value, it's either "Archived" or "Ongoing"
-    If error occurs logs and prints it on the terminal and returns the string "Error"
+Functions in this module:
+1. exist_archive(seash: int) -> str
 """
 
-logging.basicConfig(filename="archive_utils.log", level= logging.DEBUG, filemode= 'w')
+logging.basicConfig(filename="archive_utils.log", level=logging.DEBUG, filemode='w')
 
-#<1>
 async def exist_archive(seash: int) -> str: 
+    """
+    Checks if a specific season has been archived.
+
+    Queries the 'seasons' table in the database to check the value of the 
+    'status' column for the specified season.
+
+    Args:
+        seash (int): The season number to query.
+
+    Returns:
+        str: The status of the season. 
+             - Returns the status value (e.g., "Archived" or "Ongoing") if found.
+             - Returns "DNE" if the season number does not exist.
+             - Returns "Error" if an exception occurs during execution.
+    """
     supabase = await create_supabase()
     try:
         query = await supabase.table('seasons').select('status').eq('season', seash).execute()

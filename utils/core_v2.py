@@ -1,7 +1,11 @@
 """
-This is the "core" util which defines all the misellanious parameters and objects required for the entire project.
+Core utility module.
 
+This module defines the essential parameters, objects, and configuration constants 
+required for the project's operation, including database clients, API authentication, 
+and static lookup dictionaries.
 """
+
 from dotenv import load_dotenv
 from osu import Scope, AsynchronousClient, AsynchronousAuthHandler
 import os
@@ -9,69 +13,102 @@ import discord
 from discord.ext import commands
 import logging
 from itsdangerous import URLSafeSerializer
-
 from supabase._async.client import AsyncClient, create_client
 
-#Defining the bot's intent, has been enabled on discord's developer dashboard
+"""
+Functions in this module:
+1. create_supabase() -> AsyncClient
+"""
+
+# -----------------------------------------------------------------------------
+# Bot Configuration & Intents
+# -----------------------------------------------------------------------------
+
+# Configure Discord intents to allow access to message content and member information.
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-#Creating the bot objects with the intents defined above and the default command prefix
-#Note, we use / commands, so except for !session_restart command, the default prefix is irrelevent
-bot = commands.Bot(command_prefix = '!',intents = intents)
+# Initialize the Bot object.
+# Note: The prefix is primarily used for the '!session_restart' command; 
+# most user interactions occur via slash commands.
+bot = commands.Bot(command_prefix='!', intents=intents)
 
-#Locally my env file's name is sec.env so that's the name here too
+# Load environment variables from the configuration file.
 load_dotenv(dotenv_path="sec.env")
 
-#Hold's discord authentication token
+# Discord Authentication Token.
 token = os.getenv('DISCORD_TOKEN')
 
-#Our Osu!Arena server, Rival_Results and Welcome channel's id
-GUILD_ID   =  1366563799569666158
+# -----------------------------------------------------------------------------
+# Constants & IDs
+# -----------------------------------------------------------------------------
+
+# Discord IDs for the Server (Guild), specific channels, and roles.
+GUILD_ID = 1366563799569666158
 RIVAL_RESULTS_ID = 1378928704121737326
 WELCOME_ID = 1366564371899224115
 
-logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
-
-#just defining string here, will be used in session_restart.py
+# Admin role identifier used in session management.
 s_role = 'admin'
 
-#osu! API's client id and secret
+# Generic Discord Object representing the target Guild.
+GUILD = discord.Object(id=GUILD_ID)
+
+# -----------------------------------------------------------------------------
+# Logging & Authentication
+# -----------------------------------------------------------------------------
+
+logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
+
+# osu! API Credentials.
 client_id = int(os.getenv("AUTH_ID"))
 client_secret = os.getenv("AUTH_TOKEN")
 
-#supabase API's URL and KEY
+# Supabase Database Credentials.
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-#Serializer for our URL during oauth
+# URL Safe Serializer using the security key for OAuth state handling.
 SEC_KEY = os.getenv("SEC_KEY")
-
-#a generic discord object for guild
-GUILD = discord.Object(id=GUILD_ID)
-
-
-#website's url
-redirect_url = "https://rt4d-production.up.railway.app/"
 serializer = URLSafeSerializer(SEC_KEY)
 
-#auth handler for osu oauth
+# Web redirection URL for OAuth flows.
+redirect_url = "https://rt4d-production.up.railway.app/"
+
+# -----------------------------------------------------------------------------
+# API Clients
+# -----------------------------------------------------------------------------
+
+# Asynchronous Authentication Handler for osu! OAuth.
 auth = AsynchronousAuthHandler(client_id, client_secret, redirect_url, Scope.identify())
 
-#client to access osu!API
+# Asynchronous Client for interacting with the osu! API.
 client_updater = AsynchronousClient.from_credentials(client_id, client_secret, redirect_url)
 
-#to create an async client to access our database at supabase
 async def create_supabase() -> AsyncClient:
+    """
+    Creates and returns an asynchronous Supabase client.
+
+    Uses the environment variables SUPABASE_URL and SUPABASE_KEY to establish
+    the connection.
+
+    Returns:
+        AsyncClient: The initialized Supabase client instance.
+    """
     return await create_client(
-    SUPABASE_URL,
-    SUPABASE_KEY,
+        SUPABASE_URL,
+        SUPABASE_KEY,
     )
 
+# -----------------------------------------------------------------------------
+# Lookup Dictionaries
+# -----------------------------------------------------------------------------
 """
-Different dictionaries for keywords used throughout our project
+The following dictionaries map internal integer IDs to their corresponding 
+string representations for Leagues, Roles, Tables, and Statuses.
 """
+
 LEAGUE_MODES = {
     1: "bronze",
     2: "silver",
@@ -109,7 +146,7 @@ TABLE_MODES = {
     10: "Novice",
 }
 
-CHALLENGE_STATUS={
+CHALLENGE_STATUS = {
     1: "Pending",
     2: "Declined",
     3: "Unfinished",
@@ -117,11 +154,10 @@ CHALLENGE_STATUS={
     5: "Revoked"
 }
 
-SEASON_STATUS={
+SEASON_STATUS = {
     1: "Ongoing",
     2: "Archived",
     3: "DNE",
     4: "Error"
 }
-
 

@@ -1,108 +1,94 @@
 """
-All of our functions that do data fetching from our database are here
-See the schema of all supabase database at supabase_schema.txt in root
+Database fetching utilities.
+
+This module contains all functions responsible for fetching data from the 
+Supabase database. It handles data synchronization via RPC calls and retrieves 
+table data for leagues, player statistics, and challenge identifiers.
+
+For database schema details, refer to `supabase_schema.txt` in the root directory.
 """
 
 from .core_v2 import create_supabase, CHALLENGE_STATUS
 import logging
 from typing import List, Tuple, Any
 
+"""
+Functions in this module:
+1. get_table_data(leag: str, stat: str = None) -> Tuple[List[str], List[Tuple[str, ...]]]
+2. get_pp(osu_username: str = None, discord_username: str = None) -> int | None
+3. get_osu_uname(discord_uname: str) -> str | None
+4. get_discord_id(osu_username: str) -> Any
+5. get_msg_id(challenge_id: Any) -> Any
+"""
+
 logging.basicConfig(filename="db_getter.log", level=logging.DEBUG, filemode='w')
 
+async def get_table_data(leag: str, stat: str = None) -> Tuple[List[str], List[Tuple[str, ...]]]:
+    """
+    Retrieves table data for a specific league or the rivals list.
 
-"""
-This file contains the following functions:
-<1>get_table_data(leag : str, stat : str = None) -> Tuple[List[str], List[Tuple[str,...]]]
-<2>get_pp(osu_username: str = None, discord_username: str = None) -> int | None
-<3>get_osu_uname(discord_uname: str) ->str|None
-<4>get_discord_id(osu_username : str) -> Any
-<5>get_msg_id(challenge_id : Any) -> Any
-"""
-"""
-<1>get_table_data(leag : str, stat : str = None) -> Tuple[List[str], List[Tuple[str,...]]]:
+    This function fetches data from Supabase. It synchronizes the table data 
+    before fetching (using 'sync_rivals' or 'sync_table_pp' RPCs) to ensure 
+    stats are current.
 
-    This function is used to get every type of table. the state is for CHALLENGE_STATE, Unfinished and Finished ones
+    Args:
+        leag (str): The name of the league (e.g., 'bronze', 'silver') or 'rivals'.
+        stat (str, optional): The challenge status filter. Used primarily for 
+                              the 'rivals' table to distinguish between 'Unfinished' 
+                              and 'Finished' challenges.
 
-    On success returns two lists (or a tuple consisting of 2 lists). The first list consists of all the headers
-    of table. The second list is a list of tuples, each tuple consisting Any type of data, usually str or int. 
-    They are the table's data. 
-    An example of return might be: ([Rank, Player_name, current_pp], [(1, Rhythmic_Ocean, 4545), (2, spinneracc, 5454)
-    ,(3, Arriet, 9856)])
-    On falilure the functions returns a tuple of two empty list, i.e. ([],[])
-    The table is from our supabase database. Any table current or archived can be gotten from this function.
+    Returns:
+        Tuple[List[str], List[Tuple[str, ...]]]: A tuple containing:
+            - A list of column headers (List[str]).
+            - A list of rows, where each row is a tuple of values (List[Tuple[str, ...]]).
+            
+        Example Return:
+            (['Rank', 'Player', 'PP'], [(1, 'PlayerOne', 4500), (2, 'PlayerTwo', 4200)])
+            
+        Returns ([], []) on failure.
 
-    NOTE: There is only ONE table in the supabase database that's always kept up to date, it's named discord_osu, it's
-        updated every few seconds to match the latest pp of the players. However the individual tables is synced with the 
-        discord_osu table only at the time of it being called. For eg: whenever we pass on rivals as leag argument in
-        this function, the function runs ("sync_rivals") function internally in supabase which updates the rivals table. This
-        table is then returned by this function.
-    
-    NOTE: For Rivals tables, all the pending, unfinished, finished and revoked challenges are kept in the same table. 
-
-    NOTE: For other leagues, the table is stored as it's league names, like silver etc. For historical tables, it's followed with _
-        and the season number. Eg: silver_1 means silver league's table by the end of season 1. See more at supabase_schema.txt in root
-"""
-"""
-<2>get_pp(osu_username: str = None, discord_username: str = None) -> int | None:
-
-    Given either osu_username or discord_username, this function returns current_pp of the said user from our supabase database.
-    Returns None with appropriate log warnings/ errors if fails
-    NOTE: Only our supabase database does direct interaction with osu!API to fetch latest user's pp. If we need the data for any
-        other purpose, we fetch it from whatever's in our database.
-
-"""
-"""
-<3>get_osu_uname(discord_uname: str) ->str|None
-
-    Given a discord_username, this function returns the corresponding osu_username. 
-    It gets the username from discord_osu table at our supabase database
-
-"""
-"""
-<4>get_discord_id(osu_username : str) -> Any
-
-    Given a valid osu_username, it returns the corresponding user's discord id from the database. 
-    It again gets the discord id from the table at our supabase database
-"""
-"""
-<5>get_msg_id(challenge_id : Any) -> Any
-
-    Not sure about the type of data supabase sends so using Any
-    Used to get msg id for corresponding challenges
-    Usually when someone challengs someone else, after the bot makes the announcement, the id of that announcement 
-    is stored in msg_id table. That id is later modified to update the status of challenge when that status changes
-
-"""
-
-#1
-async def get_table_data(leag : str, stat : str = None) -> Tuple[List[str], List[Tuple[str,...]]]:
+    Note:
+        - The 'discord_osu' table is the only always-up-to-date table. 
+        - League tables are synced via RPC calls immediately before retrieval.
+        - Historical tables are suffixed with season numbers (e.g., 'silver_1').
+    """
     league = leag.lower()
     supabase = await create_supabase()
+    
     if league == "rivals":
         try:
             await supabase.rpc("sync_rivals").execute()
         except Exception as e:
             print(f"Error syncing Rivals: {e}")
             return [], []
+        
         try:
             if stat == CHALLENGE_STATUS[4]:
-                response = await supabase.table(league).select("challenger, challenged, for_pp, winner, challenge_status").eq("challenge_status", CHALLENGE_STATUS[4]).order("challenge_id", desc= False).execute()
+                response = await supabase.table(league).select(
+                    "challenger, challenged, for_pp, winner, challenge_status"
+                ).eq("challenge_status", CHALLENGE_STATUS[4]).order("challenge_id", desc=False).execute()
             else:
-                response = await supabase.table(league).select("challenger, challenged, challenger_stats, challenged_stats, for_pp").eq("challenge_status", CHALLENGE_STATUS[3]).order("challenge_id", desc= False).execute()
+                response = await supabase.table(league).select(
+                    "challenger, challenged, challenger_stats, challenged_stats, for_pp"
+                ).eq("challenge_status", CHALLENGE_STATUS[3]).order("challenge_id", desc=False).execute()
         except Exception as e:
-            print(f"error show rivals: {e}")
+            print(f"Error show rivals: {e}")
             return [], []
     else:
         try:
-            await supabase.rpc("sync_table_pp",{"tbl_name": league}).execute()
+            await supabase.rpc("sync_table_pp", {"tbl_name": league}).execute()
         except Exception as e:
-            print(f"error sync leagus: {e}")
+            print(f"Error sync leagues: {e}")
             return [], []
+        
         try:
-            response = await supabase.table(league).select("osu_username, initial_pp, current_pp, pp_change, percentage_change, ii").order("pp_change", desc= True).execute()
+            response = await supabase.table(league).select(
+                "osu_username, initial_pp, current_pp, pp_change, percentage_change, ii"
+            ).order("pp_change", desc=True).execute()
         except Exception as e:
-            print(f"error at show league tables: {e}")
+            print(f"Error at show league tables: {e}")
             return [], []
+
     if response.data:
         rows = response.data
         headers = list(rows[0].keys()) 
@@ -110,10 +96,20 @@ async def get_table_data(leag : str, stat : str = None) -> Tuple[List[str], List
         return headers, row_tuples
     else:
         return [], []
-    
 
-#2
 async def get_pp(osu_username: str = None, discord_username: str = None) -> int | None:
+    """
+    Fetches the current PP (Performance Points) of a user.
+
+    Can query by either osu! username or Discord username.
+
+    Args:
+        osu_username (str, optional): The user's osu! username.
+        discord_username (str, optional): The user's Discord username.
+
+    Returns:
+        int | None: The user's current PP if found, otherwise None.
+    """
     supabase = await create_supabase()
 
     if osu_username:
@@ -143,9 +139,16 @@ async def get_pp(osu_username: str = None, discord_username: str = None) -> int 
     logging.warning("[get_pp] No username provided.")
     return None
 
+async def get_osu_uname(discord_uname: str) -> str | None:
+    """
+    Retrieves the osu! username corresponding to a given Discord username.
 
-#3
-async def get_osu_uname(discord_uname: str) ->str|None:
+    Args:
+        discord_uname (str): The Discord username to query.
+
+    Returns:
+        str | None: The osu! username if found, otherwise None.
+    """
     supabase = await create_supabase()
     try:
         response = await supabase.table('discord_osu').select('osu_username').eq("discord_username", discord_uname).execute()
@@ -155,11 +158,18 @@ async def get_osu_uname(discord_uname: str) ->str|None:
             return None
     except Exception as e:
         logging.error(f"Error at get_osu_uname: {e}")
+        return None
 
+async def get_discord_id(osu_username: str) -> Any:
+    """
+    Retrieves the Discord ID corresponding to a given osu! username.
 
-#4
-# I did Any here cuz I'm not sure if supabase returns int or str for ids... It should be stored as int8 in the databse tho
-async def get_discord_id(osu_username : str) -> Any:
+    Args:
+        osu_username (str): The osu! username to query.
+
+    Returns:
+        Any: The Discord ID (usually int or int-string) if found, otherwise None.
+    """
     supabase = await create_supabase()
     try:
         query = await supabase.table('discord_osu').select('discord_id').eq('osu_username', osu_username).execute()
@@ -170,16 +180,26 @@ async def get_discord_id(osu_username : str) -> Any:
         print(f"Error at get_discord_id: {e}")
         return None
 
+async def get_msg_id(challenge_id: Any) -> Any:
+    """
+    Retrieves the Discord message ID associated with a specific challenge.
 
-#5
-async def get_msg_id(challenge_id : Any) -> Any:
+    This ID is used to locate and update the challenge announcement message 
+    when the status changes.
+
+    Args:
+        challenge_id (Any): The unique identifier for the challenge.
+
+    Returns:
+        Any: The message ID if found, otherwise None.
+    """
     supabase = await create_supabase()
     try:
         row = await supabase.table('mesg_id').select("msg_id").eq("challenge_id", challenge_id).execute()
         result = row.data[0]['msg_id']
         if result is None:
             return None
-        print (result)
+        print(result)
         return result
     except Exception as e:
         logging.error(f"Error at get msg id: {e}")
