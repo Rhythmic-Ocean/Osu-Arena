@@ -1,5 +1,3 @@
-NOTE: Doing docs starting for all functions at utils/. This is taking a lot longer than anticipated!!
-Update: Docs for utils/ and auth.py are done.
 # 🌀 osu!Arena Discord Bot
 
 > [Website](https://rt4d-production.up.railway.app) | [Join the Discord](https://discord.com/invite/GBsNU5hCQy)
@@ -88,7 +86,7 @@ Admin-only command to reset the current session and reassign users to leagues.
 ---
 
 ## Project Structure
-
+```bash
 ├── auth.py #The entry point for the bot
 ├── commands #All commands stored here
 │   ├── archived.py
@@ -126,7 +124,7 @@ Admin-only command to reset the current session and reassign users to leagues.
 │   ├── rivarly_auth.py
 │   └── rivarly_process.py
 └── web.py #website's backend 
-
+```
 ---
 
 ## Stuff Used
