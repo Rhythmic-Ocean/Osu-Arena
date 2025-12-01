@@ -1,3 +1,10 @@
 sec.env
 *.env
 *.log
+
+# Ignore Python Cache
+__pycache__/
+*.pyc
+
+# Ignore Editor Settings
+.vscode/
