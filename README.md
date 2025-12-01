@@ -146,7 +146,7 @@ Admin-only command to reset the current session and reassign users to leagues.
 
 ## Deployment Overview
 
-> All major modules are deployed separately for scalability:
+> All major modules are deployed separately:
 
 |    Component   |                    Role                        |           Deployment             |
 |----------------|------------------------------------------------|----------------------------------|
