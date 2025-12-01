@@ -177,17 +177,17 @@ Admin-only command to reset the current session and reassign users to leagues.
 
 ### 2. Python Environment Setyp
   It is recommended to use a virtual environment to manage dependencies.
-  # Create a virtual environment
+  1. Create a virtual environment
   ```bash
   python3 -m venv venv
   ```
 
-  # Activate the environment (Linux/macOS)
+  2. Activate the environment (Linux/macOS)
   ```bash
   source venv/bin/activate
   ```
 
-  # Install dependencies
+  3. Install dependencies
   ```bash
   pip install -r requirements.txt
   ```
