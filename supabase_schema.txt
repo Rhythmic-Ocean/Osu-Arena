@@ -1,124 +1,443 @@
 NOTE: PK -> Primary Key
       FK -> Foreign Key
 
-#Core User Tables
-    These tables serve as the foundation, storing primary user information
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
 
-    discord_osu (Core User Data)
-    ├── discord_username (TEXT NOT NULL) [PK]
-    ├── osu_username (TEXT)
-    ├── current_pp (INTEGER)
-    ├── osu_id (BIGINT UNIQUE)
-    ├── league (TEXT)
-    ├── global_rank (BIGINT)
-    ├── future_league (TEXT)
-    ├── discord_id (BIGINT UNIQUE)
-    ├── created_at (TIMESTAMP WITH TIME ZONE)
-    └── ii (REAL)
+Section #1: Table schema in pretty print: 
+    Core User Tables 
+        These tables serve as the foundation, storing primary user information
 
-#Challenge Tables
-    These table store everything in relation to rival challenges
+        discord_osu (Core User Data)
+        ├── discord_username (TEXT NOT NULL) [PK]
+        ├── osu_username (TEXT)
+        ├── current_pp (INTEGER)
+        ├── osu_id (BIGINT UNIQUE)
+        ├── league (TEXT)
+        ├── global_rank (BIGINT)
+        ├── future_league (TEXT)
+        ├── discord_id (BIGINT UNIQUE)
+        ├── created_at (TIMESTAMP WITH TIME ZONE)
+        └── ii (REAL)
 
-    rivals (Challenge Metadata)
-    ├── challenge_id (SMALLINT GENERATED ALWAYS AS IDENTITY NOT NULL) [PK]
-    ├── league (TEXT)
-    ├── challenger (TEXT)
-    ├── challenged (TEXT)
-    ├── challenger_initial_pp (SMALLINT)
-    ├── challenger_final_pp (SMALLINT)
-    ├── challenged_initial_pp (SMALLINT)
-    ├── challenged_final_pp (SMALLINT)
-    ├── issued_at (TIMESTAMP WITH TIME ZONE DEFAULT now())
-    ├── challenge_status (TEXT)
-    ├── for_pp (SMALLINT)
-    ├── challenged_stats (NUMERIC DEFAULT)
-    ├── challenger_stats (NUMERIC DEFAULT)
-    └── winner (TEXT)
+    Challenge Tables
+        These table store everything in relation to rival challenges
 
-    challenger (Users who ISSUED a challenge)
-    ├── id (INTEGER NOT NULL) [PK]
-    ├── discord_username (TEXT NOT NULL) [FK: REFERENCES discord_osu]
-    ├── osu_username (TEXT NOT NULL)
-    ├── challenge_id (INTEGER NOT NULL) [FK: REFERENCES rivals]
-    ├── initial_pp (INTEGER)
-    └── current_pp (INTEGER)
+        rivals (Challenge Metadata)
+        ├── challenge_id (SMALLINT GENERATED ALWAYS AS IDENTITY NOT NULL) [PK]
+        ├── league (TEXT)
+        ├── challenger (TEXT)
+        ├── challenged (TEXT)
+        ├── challenger_initial_pp (SMALLINT)
+        ├── challenger_final_pp (SMALLINT)
+        ├── challenged_initial_pp (SMALLINT)
+        ├── challenged_final_pp (SMALLINT)
+        ├── issued_at (TIMESTAMP WITH TIME ZONE DEFAULT now())
+        ├── challenge_status (TEXT)
+        ├── for_pp (SMALLINT)
+        ├── challenged_stats (NUMERIC DEFAULT)
+        ├── challenger_stats (NUMERIC DEFAULT)
+        └── winner (TEXT)
 
-    challenged (Users who RECEIVED a challenge)
-    ├── id (INTEGER NOT NULL) [PK]
-    ├── discord_username (TEXT NOT NULL) [FK: REFERENCES discord_osu]
-    ├── osu_username (TEXT NOT NULL)
-    ├── challenge_id (INTEGER NOT NULL) [FK: REFERENCES rivals]
-    ├── initial_pp (INTEGER)
-    └── current_pp (SMALLINT)
+        challenger (Users who ISSUED a challenge)
+        ├── id (INTEGER NOT NULL) [PK]
+        ├── discord_username (TEXT NOT NULL) [FK: REFERENCES discord_osu]
+        ├── osu_username (TEXT NOT NULL)
+        ├── challenge_id (INTEGER NOT NULL) [FK: REFERENCES rivals]
+        ├── initial_pp (INTEGER)
+        └── current_pp (INTEGER)
 
-    This table stores the message id from channel RIVALS_RESULT so we can later reference the id to modify the message
-    to update challenge status, usually when an unfinished/ pending challenge ends, or gets revoked
+        challenged (Users who RECEIVED a challenge)
+        ├── id (INTEGER NOT NULL) [PK]
+        ├── discord_username (TEXT NOT NULL) [FK: REFERENCES discord_osu]
+        ├── osu_username (TEXT NOT NULL)
+        ├── challenge_id (INTEGER NOT NULL) [FK: REFERENCES rivals]
+        ├── initial_pp (INTEGER)
+        └── current_pp (SMALLINT)
 
-    mesg_id (Challenge Message ID Tracking)
-    ├── id (SMALLINT GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE) [PK]
-    ├── msg_id (BIGINT)
-    └── challenge_id (SMALLINT) [FK: REFERENCES rivals]
+        This table stores the message id from channel RIVALS_RESULT so we can later reference the id to modify the message
+        to update challenge status, usually when an unfinished/ pending challenge ends, or gets revoked
 
-#League/Tier Tables
-    This group contains all the tables dedicated to tracking user progression across different tiers (Novice through Master). 
-    Note the repeated schema structure across these tables, often with suffixes _1 and _2 are for archived ones, For eg: 
-    silver_1 is the table for the final ranking for silver players during season 1.
+        mesg_id (Challenge Message ID Tracking)
+        ├── id (SMALLINT GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE) [PK]
+        ├── msg_id (BIGINT)
+        └── challenge_id (SMALLINT) [FK: REFERENCES rivals]
 
-    NOTE: The historical tables with _NUMBER's discord_username are not Foreign Keys, only the ongoing table's discord usernames are foreign keys
+    League/Tier Tables
+        This group contains all the tables dedicated to tracking user progression across different tiers (Novice through Master). 
+        Note the repeated schema structure across these tables, often with suffixes _1 and _2 are for archived ones, For eg: 
+        silver_1 is the table for the final ranking for silver players during season 1.
+
+        NOTE: The historical tables with _NUMBER's discord_username are not Foreign Keys, only the ongoing table's discord usernames are foreign keys
 
 
-    novice (Current Novice Tier)
-    ├── discord_username (TEXT) [FK: REFERENCES discord_osu]
-    ├── osu_username (TEXT)
-    ├── initial_pp (SMALLINT)
-    ├── current_pp (SMALLINT)
-    ├── pp_change (INTEGER DEFAULT)
-    ├── global_rank (INTEGER)
-    ├── id (INTEGER NOT NULL) [PK]
-    ├── percentage_change (NUMERIC DEFAULT)
-    └── ii (NUMERIC)
+        novice (Current Novice Tier)
+        ├── discord_username (TEXT) [FK: REFERENCES discord_osu]
+        ├── osu_username (TEXT)
+        ├── initial_pp (SMALLINT)
+        ├── current_pp (SMALLINT)
+        ├── pp_change (INTEGER DEFAULT)
+        ├── global_rank (INTEGER)
+        ├── id (INTEGER NOT NULL) [PK]
+        ├── percentage_change (NUMERIC DEFAULT)
+        └── ii (NUMERIC)
 
-    novice_2 (Historical)
-    ├── discord_username (TEXT)
-    ├── osu_username (TEXT)
-    ├── (..other columns mirror novice..)
-    └── ii (NUMERIC)
+        novice_2 (Historical)
+        ├── discord_username (TEXT)
+        ├── osu_username (TEXT)
+        ├── (..other columns mirror novice..)
+        └── ii (NUMERIC)
 
-    bronze, bronze_1, bronze_2 (Bronze Tier Tables)
-    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'bronze']
-    └── (..columns mirror novice..)
+        bronze, bronze_1, bronze_2 (Bronze Tier Tables)
+        ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'bronze']
+        └── (..columns mirror novice..)
 
-    silver, silver_1, silver_2 (Silver Tier Tables)
-    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'silver']
-    └── (..columns mirror novice..)
+        silver, silver_1, silver_2 (Silver Tier Tables)
+        ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'silver']
+        └── (..columns mirror novice..)
 
-    gold, gold_1, gold_2 (Gold Tier Tables)
-    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'gold']
-    └── (..columns mirror novice..)
+        gold, gold_1, gold_2 (Gold Tier Tables)
+        ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'gold']
+        └── (..columns mirror novice..)
 
-    elite, elite_1, elite_2 (Elite Tier Tables)
-    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'elite']
-    └── (..columns mirror novice..)
+        elite, elite_1, elite_2 (Elite Tier Tables)
+        ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'elite']
+        └── (..columns mirror novice..)
 
-    ranker_1 (Generic Ranker Staging/Backup) NOTE: This was only there for season one, has been deprecated since
-    │   └── (..columns mirror novice..)
+        ranker_1 (Generic Ranker Staging/Backup) NOTE: This was only there for season one, has been deprecated since
+        │   └── (..columns mirror novice..)
 
-    platinum, platinum_1, platinum_2 (Platinum Tier Tables)
-    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'platinum']
-    └── (..columns mirror novice..)
+        platinum, platinum_1, platinum_2 (Platinum Tier Tables)
+        ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'platinum']
+        └── (..columns mirror novice..)
 
-    diamond, diamond_1, diamond_2 (Diamond Tier Tables)
-    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'diamond']
-    └── (..columns mirror novice..)
+        diamond, diamond_1, diamond_2 (Diamond Tier Tables)
+        ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'diamond']
+        └── (..columns mirror novice..)
 
-    master, master_1, master_2 (Master Tier Tables)
-    ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'master']
-    └── (..columns mirror novice, initial_pp is INTEGER..)
+        master, master_1, master_2 (Master Tier Tables)
+        ├── discord_username (TEXT) [FK: REFERENCES discord_osu in 'master']
+        └── (..columns mirror novice, initial_pp is INTEGER..)
 
-#Miscellaneous Tables
-This table just keeps tracks of ongoing seasons by their numbers and their status (Ongoing or Archived)
+    Miscellaneous Tables
+    This table just keeps tracks of ongoing seasons by their numbers and their status (Ongoing or Archived)
 
-seasons (Season Status)
-   ├── id (INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL) [PK]
-   ├── status (TEXT)
-   └── season (INTEGER)
+    seasons (Season Status)
+    ├── id (INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL) [PK]
+    ├── status (TEXT)
+    └── season (INTEGER)
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+Section #2: Run this in your Supabase Editor to get the above schema table:
+
+    CREATE TABLE public.discord_osu (
+    discord_username text NOT NULL,
+    osu_username text,
+    current_pp integer,
+    osu_id bigint UNIQUE,
+    league text,
+    global_rank bigint,
+    future_league text,
+    discord_id bigint UNIQUE,
+    created_at timestamp with time zone DEFAULT now(),
+    ii real,
+    CONSTRAINT discord_osu_pkey PRIMARY KEY (discord_username)
+    );
+
+    CREATE TABLE public.rivals (
+    challenge_id smallint GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
+    league text,
+    challenger text,
+    challenged text,
+    challenger_initial_pp smallint,
+    challenger_final_pp smallint,
+    challenged_initial_pp smallint,
+    challenged_final_pp smallint,
+    issued_at timestamp with time zone DEFAULT now(),
+    challenge_status text,
+    for_pp smallint,
+    -- Auto-calculate stats
+    challenged_stats numeric GENERATED ALWAYS AS (challenged_final_pp - challenged_initial_pp) STORED,
+    challenger_stats numeric GENERATED ALWAYS AS (challenger_final_pp - challenger_initial_pp) STORED,
+    winner text,
+    CONSTRAINT rivals_pkey PRIMARY KEY (challenge_id)
+    );
+
+    CREATE TABLE public.seasons (
+    id integer GENERATED ALWAYS AS IDENTITY NOT NULL,
+    status text,
+    season integer,
+    CONSTRAINT seasons_pkey PRIMARY KEY (id)
+    );
+
+
+    -- 2. Rank Tables (With Foreign Keys to discord_osu)
+    -- Note: Added NULLIF to percentage calcs to prevent division by zero errors
+
+    CREATE TABLE public.bronze (
+    id integer GENERATED BY DEFAULT AS IDENTITY NOT NULL,
+    discord_username text,
+    osu_username text,
+    initial_pp smallint,
+    current_pp smallint,
+    global_rank integer,
+    ii numeric,
+    -- Auto-calculated columns
+    pp_change integer GENERATED ALWAYS AS (current_pp - initial_pp) STORED,
+    percentage_change numeric GENERATED ALWAYS AS (round(((((current_pp - initial_pp))::numeric * 100.0) / NULLIF((initial_pp)::numeric, 0)), 2)) STORED,
+    CONSTRAINT bronze_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_bronze_discord FOREIGN KEY (discord_username) REFERENCES public.discord_osu(discord_username)
+    );
+
+    CREATE TABLE public.silver (
+    id integer GENERATED BY DEFAULT AS IDENTITY NOT NULL,
+    discord_username text,
+    osu_username text,
+    initial_pp smallint,
+    current_pp integer,
+    global_rank integer,
+    ii numeric,
+    pp_change integer GENERATED ALWAYS AS (current_pp - initial_pp) STORED,
+    percentage_change numeric GENERATED ALWAYS AS (round(((((current_pp - initial_pp))::numeric * 100.0) / NULLIF((initial_pp)::numeric, 0)), 2)) STORED,
+    CONSTRAINT silver_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_silver_discord FOREIGN KEY (discord_username) REFERENCES public.discord_osu(discord_username)
+    );
+
+    CREATE TABLE public.gold (
+    id integer GENERATED BY DEFAULT AS IDENTITY NOT NULL,
+    discord_username text,
+    osu_username text,
+    initial_pp smallint,
+    current_pp smallint,
+    global_rank integer,
+    ii numeric,
+    pp_change integer GENERATED ALWAYS AS (current_pp - initial_pp) STORED,
+    percentage_change numeric GENERATED ALWAYS AS (round(((((current_pp - initial_pp))::numeric * 100.0) / NULLIF((initial_pp)::numeric, 0)), 2)) STORED,
+    CONSTRAINT gold_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_gold_discord FOREIGN KEY (discord_username) REFERENCES public.discord_osu(discord_username)
+    );
+
+    CREATE TABLE public.platinum (
+    id integer GENERATED BY DEFAULT AS IDENTITY NOT NULL UNIQUE,
+    discord_username text,
+    osu_username text,
+    initial_pp smallint,
+    current_pp smallint,
+    global_rank integer,
+    ii numeric,
+    pp_change integer GENERATED ALWAYS AS (current_pp - initial_pp) STORED,
+    percentage_change numeric GENERATED ALWAYS AS (round(((((current_pp - initial_pp))::numeric * 100.0) / NULLIF((initial_pp)::numeric, 0)), 2)) STORED,
+    CONSTRAINT platinum_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_platinum_discord FOREIGN KEY (discord_username) REFERENCES public.discord_osu(discord_username)
+    );
+
+    CREATE TABLE public.diamond (
+    id integer GENERATED BY DEFAULT AS IDENTITY NOT NULL,
+    discord_username text,
+    osu_username text,
+    initial_pp smallint,
+    current_pp smallint,
+    global_rank integer,
+    ii numeric,
+    pp_change integer GENERATED ALWAYS AS (current_pp - initial_pp) STORED,
+    percentage_change numeric GENERATED ALWAYS AS (round(((((current_pp - initial_pp))::numeric * 100.0) / NULLIF((initial_pp)::numeric, 0)), 2)) STORED,
+    CONSTRAINT diamond_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_diamond_discord FOREIGN KEY (discord_username) REFERENCES public.discord_osu(discord_username)
+    );
+
+    CREATE TABLE public.master (
+    id integer GENERATED BY DEFAULT AS IDENTITY NOT NULL,
+    discord_username text,
+    osu_username text,
+    initial_pp integer,
+    current_pp smallint,
+    global_rank integer,
+    ii numeric,
+    pp_change integer GENERATED ALWAYS AS (current_pp - initial_pp) STORED,
+    percentage_change numeric GENERATED ALWAYS AS (round(((((current_pp - initial_pp))::numeric * 100.0) / NULLIF((initial_pp)::numeric, 0)), 2)) STORED,
+    CONSTRAINT master_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_master_discord FOREIGN KEY (discord_username) REFERENCES public.discord_osu(discord_username)
+    );
+
+    CREATE TABLE public.elite (
+    id integer GENERATED BY DEFAULT AS IDENTITY NOT NULL,
+    discord_username text,
+    osu_username text,
+    initial_pp smallint,
+    current_pp smallint,
+    global_rank integer,
+    ii numeric,
+    pp_change integer GENERATED ALWAYS AS (current_pp - initial_pp) STORED,
+    percentage_change numeric GENERATED ALWAYS AS (round(((((current_pp - initial_pp))::numeric * 100.0) / NULLIF((initial_pp)::numeric, 0)), 2)) STORED,
+    CONSTRAINT elite_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_elite_discord FOREIGN KEY (discord_username) REFERENCES public.discord_osu(discord_username)
+    );
+
+    CREATE TABLE public.novice (
+    id integer GENERATED BY DEFAULT AS IDENTITY NOT NULL,
+    discord_username text,
+    osu_username text,
+    initial_pp smallint,
+    current_pp smallint,
+    global_rank integer,
+    ii numeric,
+    pp_change integer GENERATED ALWAYS AS (current_pp - initial_pp) STORED,
+    percentage_change numeric GENERATED ALWAYS AS (round(((((current_pp - initial_pp))::numeric * 100.0) / NULLIF((initial_pp)::numeric, 0)), 2)) STORED,
+    CONSTRAINT novice_pkey PRIMARY KEY (id),
+    CONSTRAINT fk_novice_discord FOREIGN KEY (discord_username) REFERENCES public.discord_osu(discord_username)
+    );
+
+    -- 3. Archive/Snapshot Tables (No auto-calcs or FKs, based on schema provided)
+
+    CREATE TABLE public.bronze_1 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+    CREATE TABLE public.bronze_2 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+
+    CREATE TABLE public.silver_1 (discord_username text, osu_username text, initial_pp smallint, current_pp integer, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+    CREATE TABLE public.silver_2 (discord_username text, osu_username text, initial_pp smallint, current_pp integer, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+
+    CREATE TABLE public.gold_1 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, global_rank integer, id integer, pp_change integer, percentage_change numeric, ii numeric);
+    CREATE TABLE public.gold_2 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, global_rank integer, id integer, pp_change integer, percentage_change numeric, ii numeric);
+
+    CREATE TABLE public.platinum_1 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+    CREATE TABLE public.platinum_2 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+
+    CREATE TABLE public.diamond_1 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+    CREATE TABLE public.diamond_2 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+
+    CREATE TABLE public.master_1 (discord_username text, osu_username text, initial_pp integer, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+    CREATE TABLE public.master_2 (discord_username text, osu_username text, initial_pp integer, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+
+    CREATE TABLE public.elite_1 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+    CREATE TABLE public.elite_2 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+
+    CREATE TABLE public.novice_2 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+    CREATE TABLE public.ranker_1 (discord_username text, osu_username text, initial_pp smallint, current_pp smallint, pp_change integer, global_rank integer, id integer, percentage_change numeric, ii numeric);
+
+    -- 4. Challenge System Tables (Depend on Rivals and Discord_Osu)
+
+    CREATE TABLE public.challenged (
+    id integer GENERATED BY DEFAULT AS IDENTITY NOT NULL,
+    discord_username text NOT NULL,
+    osu_username text NOT NULL,
+    challenge_id integer NOT NULL,
+    initial_pp integer,
+    current_pp smallint,
+    CONSTRAINT challenged_pkey PRIMARY KEY (id),
+    CONSTRAINT challenged_challenge_id_fkey FOREIGN KEY (challenge_id) REFERENCES public.rivals(challenge_id),
+    CONSTRAINT challenged_discord_username_fkey FOREIGN KEY (discord_username) REFERENCES public.discord_osu(discord_username)
+    );
+
+    CREATE TABLE public.challenger (
+    id integer GENERATED BY DEFAULT AS IDENTITY NOT NULL,
+    discord_username text NOT NULL,
+    osu_username text NOT NULL,
+    challenge_id integer NOT NULL,
+    initial_pp integer,
+    current_pp integer,
+    CONSTRAINT challenger_pkey PRIMARY KEY (id),
+    CONSTRAINT challenger_challenge_id_fkey FOREIGN KEY (challenge_id) REFERENCES public.rivals(challenge_id),
+    CONSTRAINT challenger_discord_username_fkey FOREIGN KEY (discord_username) REFERENCES public.discord_osu(discord_username)
+    );
+
+    CREATE TABLE public.mesg_id (
+    id smallint GENERATED ALWAYS AS IDENTITY NOT NULL UNIQUE,
+    msg_id bigint,
+    challenge_id smallint,
+    CONSTRAINT mesg_id_pkey PRIMARY KEY (id),
+    CONSTRAINT mesg_id_challenge_id_fkey FOREIGN KEY (challenge_id) REFERENCES public.rivals(challenge_id)
+    );
+
+    -- 5. Empty/Misc Tables
+    CREATE TABLE public.rt4d (
+        id integer GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY
+    );
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+Section #3: Subapase RPC functions:
+
+    CREATE OR REPLACE FUNCTION sync_table_pp(tbl_name TEXT)
+    RETURNS void AS $$
+    BEGIN 
+    EXECUTE format(
+        'UPDATE %I s
+        SET current_pp = u.current_pp, osu_username = u.osu_username, global_rank = u.global_rank, ii = u.ii
+        FROM discord_osu u
+        WHERE s.discord_username = u.discord_username;',
+        tbl_name
+    );
+    END;
+    $$ LANGUAGE plpgsql;
+
+
+    CREATE OR REPLACE FUNCTION sync_rivals()
+    RETURNS void AS $$
+    BEGIN 
+    UPDATE challenged s
+    SET current_pp = u.current_pp
+    FROM discord_osu u
+    WHERE s.discord_username = u.discord_username;
+
+    UPDATE challenger s
+    SET current_pp = u.current_pp
+    FROM discord_osu u
+    WHERE s.discord_username = u.discord_username;
+
+    UPDATE rivals s
+    SET challenger_final_pp = u.current_pp
+    FROM challenger u
+    WHERE s.challenge_id = u.challenge_id;
+
+    UPDATE rivals s
+    SET challenged_final_pp = u.current_pp
+    FROM challenged u
+    WHERE s.challenge_id = u.challenge_id;
+    RETURN;
+    END;
+    $$ LANGUAGE plpgsql;
+
+
+    CREATE OR REPLACE FUNCTION update_init_pp(tbl_name TEXT)
+    RETURNS void AS $$
+    BEGIN 
+    EXECUTE format(
+        'UPDATE %I s
+        SET initial_pp = u.current_pp, osu_username = u.osu_username, global_rank = u.global_rank
+        FROM discord_osu u
+        WHERE s.discord_username = u.discord_username;',
+        tbl_name
+    );
+    END;
+    $$ LANGUAGE plpgsql;
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
+<------------------------------------------------------------------------------------------------------------------------->
