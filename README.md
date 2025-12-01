@@ -1,5 +1,7 @@
 # 🌀 osu!Arena Discord Bot
 
+![Docs Status](https://img.shields.io/badge/Docs-Work%20In%20Progress-yellow)
+
 > [Website](https://rt4d-production.up.railway.app) | [Join the Discord](https://discord.com/invite/GBsNU5hCQy)
 
 **osu!Arena** is a custom-built, real-time Discord bot designed for the **osu! community** at osu!Arena. It manages league sessions, rivalries, challenges, player verification, and rank syncing for a competitive community racing to reach 4-digit osu! global rank and beyond.
@@ -86,6 +88,7 @@ Admin-only command to reset the current session and reassign users to leagues.
 ---
 
 ## Project Structure
+> ⚠️ **Note:** Documentation for `utils/` and `auth.py` is complete. Other modules are currently being documented.
 ```bash
 ├── auth.py #The entry point for the bot
 ├── commands #All commands stored here
