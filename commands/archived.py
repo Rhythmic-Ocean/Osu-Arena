@@ -2,6 +2,7 @@ import discord
 from utils import bot, SEASON_STATUS, GUILD, exist_archive, TABLE_MODES, get_table_data, CHALLENGE_STATUS, render_table_image
 from discord import app_commands
 
+
 @bot.tree.command(name="archived", description="Shows archived tables", guild=GUILD)
 @app_commands.describe(season="any finished season", league="league name")
 async def archived(interaction: discord.Interaction, season: int, league: str):

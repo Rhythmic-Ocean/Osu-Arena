@@ -88,7 +88,10 @@ Admin-only command to reset the current session and reassign users to leagues.
 ---
 
 ## Project Structure
-> ⚠️ **Note:** Documentation for `utils/` and `auth.py` is complete. Other modules are currently being documented.
+> ⚠ **Note:** Documentation for `utils/` and `auth.py` is complete. Other modules are currently being  documented.
+> ⚠ **Disclaimer:** This was my first experience with working on something so big with an OOP language so yeah, I
+                   have used a lott  of functions in  places where classes would do a  better job. I'm working on 
+                   fixing that too!
 ```bash
 ├── auth.py #The entry point for the bot
 ├── commands #All commands stored here
@@ -121,7 +124,7 @@ Admin-only command to reset the current session and reassign users to leagues.
 │   ├── __init__.py
 │   ├── link_utils.py
 │   ├── monitoring.py #runs in parallel with the bot. Moniters for any new user after they do /link to make announcement + 
-│   │                  monitors for results in rival challenges
+│   │                 #monitors for results in rival challenges
 │   ├── render.py
 │   ├── reset_utils.py
 │   ├── rivarly_auth.py
@@ -157,7 +160,7 @@ Admin-only command to reset the current session and reassign users to leagues.
 
 
 ---
-## Local Setup
+## Local Setup(Linux/ MacOS)
 
   Follow these steps to get a development instance of **osu!Arena** running locally.
 
@@ -178,7 +181,7 @@ Admin-only command to reset the current session and reassign users to leagues.
   cd Osu-Arena
   ```
 
-### 2. Python Environment Setyp
+### 2. Python Environment Setup
   It is recommended to use a virtual environment to manage dependencies.
   1. Create a virtual environment
   ```bash
@@ -195,7 +198,7 @@ Admin-only command to reset the current session and reassign users to leagues.
   pip install -r requirements.txt
   ```
 
-### 3. Cnfiguring .env
+### 3. Configuring .env
   Create a file named `sec.env` in the root directory. Copy and paste the following template, filling in your specific API keys:
 
   ```bash
@@ -229,7 +232,7 @@ Admin-only command to reset the current session and reassign users to leagues.
 
   3. Open the file `supabase_schema.txt` located in the root of this repository.
 
-  4. Copy the contents and run the query in Supabase to set up the required tables and RPC functions.
+  4. Copy the contents at Sections #2 and #3 and run the query in Supabase to set up the required tables and RPC functions.
 
 ### 5. Running the Bot
 
