@@ -175,7 +175,7 @@ Admin-only command to reset the current session and reassign users to leagues.
   ```bash
   # Replace 'YOUR_USERNAME' with your GitHub username
   git clone [https://github.com/YOUR_USERNAME/Osu-Arena.git]
-  cd osu-arena-bot
+  cd Osu-Arena
   ```
 
 ### 2. Python Environment Setyp
