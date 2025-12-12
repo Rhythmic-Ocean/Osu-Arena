@@ -10,7 +10,7 @@ import discord
 import commands
 
 from utils import token, bot, RIVAL_RESULTS_ID, GUILD_ID
-from utils import monitor_database, monitor_new_user
+from utils.monitoring import monitor_database, monitor_new_players, monitor_top_plays
 
 # specific logger for this file
 log = logging.getLogger(__name__)
@@ -31,6 +31,7 @@ async def on_ready():
 
     # Sync Commands with Osu_Arena Server. The GUILD_ID is for Osu_Arena server
     try:
+        print(GUILD_ID)
         synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
         print(f"Synced {len(synced)} commands to guild {GUILD_ID}!")
     except Exception as e:
@@ -40,7 +41,8 @@ async def on_ready():
     # monitor_database is for Rivals table monitoring for any wins/ losses. Then update it on the server
     # monitor_new_user is for any new user that did /link and was added to the db. Then announce which league they were put in.
     bot.loop.create_task(monitor_database(bot, RIVAL_RESULTS_ID))
-    bot.loop.create_task(monitor_new_user(bot))
+    bot.loop.create_task(monitor_new_players(bot))
+    bot.loop.create_task(monitor_top_plays(bot))
     
     # Mark setup as done so we don't repeat this if the bot reconnects
     bot.setup_finished = True

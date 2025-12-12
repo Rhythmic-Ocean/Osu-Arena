@@ -7,13 +7,27 @@ the bot. They are responsible for:
 2. Monitoring the database for new user registrations to assign roles (Welcome).
 """
 
-from .core_v2 import create_supabase, CHALLENGE_STATUS, GUILD_ID, WELCOME_ID
+from .core_v2 import create_supabase, CHALLENGE_STATUS, GUILD_ID, WELCOME_ID, TOP_PLAY_ID
+from osu import Client, GameModeStr
+import os
 from .db_getter import get_discord_id, get_msg_id
 import logging
 import asyncio
 import discord
 from discord.ext import commands
 from typing import Any, Dict, List
+from osu import SoloScore, LegacyScore
+from dotenv import load_dotenv
+
+load_dotenv(dotenv_path="sec.env")
+redirect_url = "http://127.0.0.1:8080"  # not used directly, fine to keep
+
+OSU_CLIENT_ID = os.getenv("OSU_CLIENT2_ID")
+OSU_CLIENT_SECRET = os.getenv("OSU_CLIENT2_SECRET")
+
+client_updater = Client.from_credentials(OSU_CLIENT_ID,
+                                             OSU_CLIENT_SECRET,
+                                             redirect_url)
 
 """
 Functions in this module:
@@ -25,7 +39,6 @@ Functions in this module:
 """
 
 # Global state to track existing users to prevent re-welcoming them on bot restart.
-existing_id = set()
 init = asyncio.Event()
 
 logging.basicConfig(filename="monitoring.log", level=logging.DEBUG, filemode='w')
@@ -137,71 +150,61 @@ async def send_winner_announcement(bot: commands.Bot, channel_id: int, result: D
                    f"<@{challenger}> vs <@{challenged}> | {pp}PP | Finished. WINNER: <@{winner}>"
                 )
 
-async def monitor_new_user(bot: commands.Bot) -> None:
-    """
-    Background task: Monitors for new users.
 
-    Checks the 'discord_osu' table for new entries. 
-    - On startup, it populates a cache of existing users.
-    - On subsequent checks, if a new user is found, it assigns them roles 
-      and welcomes them in the welcome channel.
+
+async def monitor_new_players(bot: commands.Bot) -> None:
     """
+    Background task: Checks for 'new_player_announce' = True
+    """
+    await bot.wait_until_ready()
+    
     guild = bot.get_guild(GUILD_ID)
-    if guild:
-        print(f"Found guild: {guild.name}")
-    else:
-        print("Guild not found in cache.")
-        return # Cannot proceed without guild
+    print(guild)
+    if not guild:
+        print("monitor_new_players: Guild not found.")
+        return 
 
     channel = guild.get_channel(WELCOME_ID)
-    if channel is None:
-        logging.error(f"Could not find channel with ID {WELCOME_ID}")
-        print(f"Could not find channel with ID {WELCOME_ID}")
+    supabase = await create_supabase()
+    print("Started New Player Monitor.")
 
     while True:
         try:
-            supabase = await create_supabase()
-            try:
-                query = await supabase.table('discord_osu').select('discord_id, league').execute()
-            except Exception as e:
-                print(f"Something wrong at query in monitor_new_user: {e}")
-                logging.error(f"Something wrong at query in monitor_new_user: {e}")
-                await asyncio.sleep(5)
-                continue
+            # Query only users marked for new player announcement
+            response = await supabase.table('discord_osu')\
+                .select("discord_id, league, osu_id, osu_username")\
+                .eq("new_player_announce", True)\
+                .execute()
 
-            # First run: Populate cache only
-            if not init.is_set():
-                for data in query.data:
-                    existing_id.add(data['discord_id'])
-                init.set()
-            
-            # Subsequent runs: Check for new users
-            else:
-                for data in query.data:
-                    if data['discord_id'] in existing_id:
-                        continue
-                    else:
-                        # New user found
-                        try:
-                            query_uname = await supabase.table('discord_osu').select('osu_username').eq('discord_id', data['discord_id']).execute()
-                            osu_username = query_uname.data[0]['osu_username']
-                        except Exception as e:
-                            print(f"Failed to query new discord_id: {e}")
-                            continue
+            for data in response.data:
+                discord_id = data['discord_id']
+                osu_username = data.get('osu_username', 'Unknown')
 
-                        try:
-                            await give_role_nickname(data['discord_id'], data['league'], guild, osu_username)
-                            if channel:
-                                await channel.send(f"<@{data['discord_id']}>, you have been assigned to {data['league'].capitalize()} league.")
-                            existing_id.add(data['discord_id'])
-                        except Exception as e:
-                            logging.error(f"Error inside monitor_new_user logic: {e}")
-                            print(f"Error inside add in user: {e}")
+                # 1. Turn off the flag in DB immediately
+                try:
+                    await supabase.table("discord_osu").update({
+                        "new_player_announce": False
+                    }).eq("osu_id", data['osu_id']).execute()
+                except Exception as e:
+                    logging.error(f"Failed to update DB for new player {osu_username}: {e}")
+                    continue 
 
-            await asyncio.sleep(5)
+                # 2. Assign Role & Welcome
+                try:
+                    await give_role_nickname(discord_id, data['league'], guild, osu_username)
+                    if channel:
+                        await channel.send(f"<@{discord_id}>, you have been assigned to {data['league'].capitalize()} league.")
+                    
+                    logging.info(f"Processed new player: {osu_username}")
+                except Exception as e:
+                    logging.error(f"Error executing logic for new player {osu_username}: {e}")
+
         except Exception as e:
-            logging.error(f"Error at the end of monitor_new_user(): {e}")
-            print(f"Error at the end of monitor_new_user(): {e}")
+            print(f"Error in monitor_new_players loop: {e}")
+        
+        await asyncio.sleep(5)
+
+
 
 async def give_role_nickname(discord_id: int, league: str, guild: discord.Guild, osu_username: str) -> None:
     """
@@ -237,6 +240,65 @@ async def give_role_nickname(discord_id: int, league: str, guild: discord.Guild,
     except Exception as e:
         logging.error(f"Error changing nickname: {e}")
         print(f"Error changing nickname: {e}")
+
+
+
+
+async def monitor_top_plays(bot: commands.Bot) -> None:
+    """
+    Background task: Checks for 'top_player_announce' = True
+    """
+    await bot.wait_until_ready()
+    
+    guild = bot.get_guild(GUILD_ID)
+    if not guild:
+        print("monitor_top_players: Guild not found.")
+        return 
+
+    # You might want a different channel for achievements?
+    # If using the same welcome channel:
+    channel = guild.get_channel(TOP_PLAY_ID) 
+    
+    supabase = await create_supabase()
+    print("Started Top Player Monitor.")
+
+    while True:
+        try:
+            # Query only users marked for top player announcement
+            response = await supabase.table('discord_osu')\
+                .select("discord_id, osu_username, osu_id, top_play_id")\
+                .eq("top_play_announce", True)\
+                .execute()
+
+            for data in response.data:
+                osu_username = data.get('osu_username', 'Unknown')
+                top_play_id = data['top_play_id']
+                print(top_play_id)
+                top_play  = client_updater.get_score_by_id_only(top_play_id)
+                title = top_play.beatmapset.title
+                # 1. Turn off the flag in DB
+                try:
+                    await supabase.table("discord_osu").update({
+                        "top_play_announce": False
+                    }).eq("osu_id", data['osu_id']).execute()
+                except Exception as e:
+                    print(f"Failed to update DB for top player {osu_username}: {e}")
+                    continue
+
+                # 2. Announce Achievement
+                try:
+                    if channel:
+                        await channel.send(f"<@{data['discord_id']}> has a new Top play on {title}! : {int(top_play.pp) if top_play else 0}pp")
+                    logging.info(f"Announced top player: {osu_username}")
+                except Exception as e:
+                    logging.error(f"Error announcing top player {osu_username}: {e}")
+
+        except Exception as e:
+            print(f"Error in monitor_top_players loop: {e}")
+
+        await asyncio.sleep(5)
+
+
                         
 
 
@@ -244,9 +306,5 @@ async def give_role_nickname(discord_id: int, league: str, guild: discord.Guild,
     
 
 
-
-
-
-    
 
         

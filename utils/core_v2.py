@@ -48,6 +48,7 @@ token = os.getenv('DISCORD_TOKEN')
 GUILD_ID = 1366563799569666158
 RIVAL_RESULTS_ID = 1378928704121737326
 WELCOME_ID = 1366564371899224115
+TOP_PLAY_ID = 1448917430725513226
 
 # Admin role identifier used in session management.
 s_role = 'admin'
@@ -75,7 +76,6 @@ serializer = URLSafeSerializer(SEC_KEY)
 
 # Web redirection URL for OAuth flows.
 redirect_url = "https://rt4d-production.up.railway.app/"
-
 # -----------------------------------------------------------------------------
 # API Clients
 # -----------------------------------------------------------------------------
