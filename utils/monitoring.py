@@ -10,7 +10,7 @@ the bot. They are responsible for:
 from .core_v2 import create_supabase, CHALLENGE_STATUS, GUILD_ID, WELCOME_ID, TOP_PLAY_ID
 from osu import Client, GameModeStr
 import os
-from .db_getter import get_discord_id, get_msg_id
+from .db_getter import get_discord_id, get_msg_id, get_pp
 import logging
 import asyncio
 import discord
@@ -271,6 +271,7 @@ async def monitor_top_plays(bot: commands.Bot) -> None:
                 .execute()
 
             for data in response.data:
+                discord_id = data.get('discord_id', 0)
                 osu_username = data.get('osu_username', 'Unknown')
                 top_play_id = data['top_play_id']
                 print(top_play_id)
@@ -286,9 +287,11 @@ async def monitor_top_plays(bot: commands.Bot) -> None:
                     continue
 
                 # 2. Announce Achievement
+                embed = await create_score_embed(top_play)
+                content_str = f"New Top Play from <@{discord_id}>!" if discord_id else "New Top Play!"
                 try:
                     if channel:
-                        await channel.send(f"<@{data['discord_id']}> has a new Top play on {title}! : {int(top_play.pp) if top_play else 0}pp")
+                        await channel.send(content= content_str, embed=embed)
                     logging.info(f"Announced top player: {osu_username}")
                 except Exception as e:
                     logging.error(f"Error announcing top player {osu_username}: {e}")
@@ -297,6 +300,106 @@ async def monitor_top_plays(bot: commands.Bot) -> None:
             print(f"Error in monitor_top_players loop: {e}")
 
         await asyncio.sleep(5)
+
+
+async def create_score_embed(play: SoloScore | LegacyScore):
+    user = play.user
+    beatmap = play.beatmap
+    beatmapset = play.beatmapset
+    base = 127397
+    
+    #cuz it's compact type, so sometime stats and country code might not get thru
+    if user.statistics is None or user.country_code is None:
+        try:
+            user = client_updater.get_user(user.id, mode="osu")
+        except Exception as e:
+            print(f"Could not fetch full user: {e}")
+ 
+
+
+    if isinstance(play, SoloScore):
+        # Lazer / SoloScore
+        played_date = play.ended_at
+        score_val = play.total_score
+        accuracy = play.accuracy * 100
+        mod_acronyms = [m.mod.value for m in play.mods]
+        combo = play.max_combo
+        pp = play.pp if play.pp else 0
+        misses = getattr(play.statistics, "miss", 0) 
+        rank_str = play.rank.name
+    else:
+        played_date = play.created_at 
+        score_val = play.score
+        accuracy = play.accuracy * 100
+        mod_acronyms = [m.value for m in play.mods]
+        combo = play.max_combo
+        pp = play.pp if play.pp else 0
+        misses = play.statistics.count_miss
+        rank_str = play.rank.name
+    mods = "+" + "".join(mod_acronyms) if mod_acronyms else "+NM"
+
+    ts = int(played_date.timestamp())
+    time_ago = f"<t:{ts}:R>"  # "2 hours ago"
+
+    map_link = f"https://osu.ppy.sh/b/{beatmap.id}"
+    user_link = f"https://osu.ppy.sh/u/{user.id}"
+    cover_url = beatmapset.covers.list_2x
+ 
+    try:
+        total_pp = user.statistics.pp 
+        global_rank = f"#{user.statistics.global_rank}" if user.statistics.global_rank else "-"
+        country_code = user.country_code
+        country_rank = user.statistics.country_rank
+        flag = "".join(chr(base + ord(c)) for c in country_code.upper())
+    except AttributeError:
+        total_pp = 0
+        global_rank = "-"
+        country_code = "??"
+        country_rank = 0
+        flag = "🏳️"
+
+    m, s = divmod(beatmap.total_length, 60)
+    length_str = f"{m:02d}:{s:02d}"
+
+
+    embed = discord.Embed(color=0x2ecc71)
+
+    author_text = f"{flag} {user.username}: {total_pp:,.0f}pp ({global_rank} {country_code}{country_rank})"
+    embed.set_author(name=author_text, url=user_link, icon_url=user.avatar_url)
+
+    embed.title = f"{beatmapset.artist} - {beatmapset.title} [{beatmap.version}] [{beatmap.difficulty_rating:.2f}★]"
+    embed.url = map_link
+
+    grade_map = {
+        "XH": "<:XH:1449232200368259265>", # Silver SS
+        "X":  "<:X_:1449232164771332096>", # Gold SS
+        "SH": "<:SH:1449232118751297670>", # Silver S
+        "S":  "<:S_:1449232073779974194>", # Gold S
+        "A":  "<:A_:1449231818392998030>",
+        "B":  "<:B_:1449231894368485528>",
+        "C":  "<:C_:1449231970126135438>",
+        "D":  "<:D_:1449232012341674085>",
+        "F":  "💔" # You didn't provide an F, so I kept the broken heart as a fallback
+    }
+    grade_emoji = grade_map.get(rank_str, "❓")
+
+    description = (
+        f"__**New Top Play**__\n"
+        f"{grade_emoji} **{mods}** • {score_val:,} • **{accuracy:.2f}%** • {time_ago}\n"
+        f"**{pp:.2f}**pp • **{combo}x**/{beatmap.max_combo}x • {misses} ❌\n"
+        f"`{length_str}` • BPM: `{beatmap.bpm}` • CS: `{beatmap.cs}` AR: `{beatmap.ar}` OD: `{beatmap.accuracy}` HP: `{beatmap.drain}`"
+    )
+    embed.description = description
+
+    if cover_url:
+        embed.set_thumbnail(url=cover_url)
+
+
+    embed.set_footer(text=f"Mapset by {beatmapset.creator} • Status: {beatmapset.status.name.capitalize()}")
+
+    return embed
+
+    
 
 
                         
