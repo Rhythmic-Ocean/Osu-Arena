@@ -371,15 +371,15 @@ async def create_score_embed(play: SoloScore | LegacyScore):
     embed.url = map_link
 
     grade_map = {
-        "XH": "<:XH:1449232200368259265>", # Silver SS
-        "X":  "<:X_:1449232164771332096>", # Gold SS
-        "SH": "<:SH:1449232118751297670>", # Silver S
-        "S":  "<:S_:1449232073779974194>", # Gold S
+        "XH": "<:XH:1449232200368259265>", 
+        "X":  "<:X_:1449232164771332096>", 
+        "SH": "<:SH:1449232118751297670>", 
+        "S":  "<:S_:1449232073779974194>", 
         "A":  "<:A_:1449231818392998030>",
         "B":  "<:B_:1449231894368485528>",
         "C":  "<:C_:1449231970126135438>",
         "D":  "<:D_:1449232012341674085>",
-        "F":  "💔" # You didn't provide an F, so I kept the broken heart as a fallback
+        "F":  "💔" 
     }
     grade_emoji = grade_map.get(rank_str, "❓")
 
