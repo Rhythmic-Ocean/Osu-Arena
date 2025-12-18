@@ -114,7 +114,7 @@ def update_top_plays(top_play_data, osu_id, announce_bool):
 
 
 def update_player():
-    response = supabase.table("discord_osu").select("osu_id, top_play_id, current_pp").execute()
+    response = supabase.table("discord_osu").select("osu_id, top_play_id, current_pp, ii").execute()
     if not response.data:
         print("No users found in the discord_osu table.")
         return
@@ -125,13 +125,14 @@ def update_player():
         osu_id = user.get("osu_id")
         top_play_id = user.get("top_play_id")
         current_pp = user.get("current_pp")
+        current_ii = user.get('ii', 0)
 
         data = get_user_data(osu_id)
         top_play_data = get_top_play(osu_id)
 
         if data is not None:
             username, rank, pp, ii = data
-            if current_pp != pp:
+            if current_pp != pp or current_ii != ii:
                 update_scores(data, osu_id)
             else:
                 print(f"Same pp for {osu_id}")
