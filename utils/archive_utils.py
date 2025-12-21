@@ -72,3 +72,22 @@ async def get_historical_points(stat):
     except Exception as e:
         print(f"Error at function get_historical_points(): {e}")
         return None
+
+
+async def latest_archived_season():
+    season_supabase = await create_supabase()
+    try:
+        response = (
+            await season_supabase.table("seasons")
+            .select("season")
+            .eq("status", "Archived")
+            .order("season", desc=True)
+            .limit(1)
+            .maybe_single()
+            .execute()
+        )
+        if response and response.data:
+            return response.data["season"]
+    except Exception as e:
+        print(f"Error at latest_archived_season() : {e}")
+    return 0

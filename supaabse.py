@@ -48,7 +48,7 @@ def get_top_play(osu_id):
     if osu_id:
         try:
             top_scores = client_updater.get_user_scores(
-                osu_id, UserScoreType.BEST, mode=GameModeStr.STANDARD, limit=1
+                osu_id, UserScoreType.BEST, limit=1
             )
             if not top_scores:
                 return

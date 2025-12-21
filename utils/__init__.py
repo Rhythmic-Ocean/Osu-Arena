@@ -1,4 +1,4 @@
-from .archive_utils import exist_archive, get_historical_points
+from .archive_utils import exist_archive, get_historical_points, latest_archived_season
 from .challenge_final import challenge_accepted, challenge_declined, revoke_success
 from .core_v2 import (
     bot,

@@ -8,6 +8,7 @@ from utils import (
     get_table_data,
     CHALLENGE_STATUS,
     render_table_image,
+    latest_archived_season,
 )
 from discord import app_commands
 
@@ -15,10 +16,34 @@ from discord import app_commands
 @bot.tree.command(name="archived", description="Shows archived tables", guild=GUILD)
 @app_commands.describe(season="any finished season", league="league name")
 async def archived(interaction: discord.Interaction, season: int, league: str):
+    last_season = await latest_archived_season()
     leag = league.capitalize()
+
     if leag not in TABLE_MODES.values():
         await interaction.response.send_message(
             "❌ Invalid league name. Use one of: " + ", ".join(TABLE_MODES.values()),
+            ephemeral=True,
+        )
+        return
+
+    if season > last_season:
+        await interaction.response.send_message(
+            f"❌ Invalid season. Currnet ongoing season is season{last_season}\n"
+            f"Please choose a past season.",
+            ephemeral=True,
+        )
+        return
+    elif season == 0 and leag != TABLE_MODES[9]:
+        await interaction.response.send_message(
+            "❌ Invalid season. Season 0 only valid for Rivals.\n"
+            "Please choose a past season.",
+            ephemeral=True,
+        )
+        return
+    elif season < 0:
+        await interaction.response.send_message(
+            "❌ Invalid season. There's no negative season.\n"
+            "Please choose a past season.",
             ephemeral=True,
         )
         return

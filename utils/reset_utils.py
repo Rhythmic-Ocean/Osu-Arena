@@ -6,8 +6,8 @@ This module handles the logic for transitioning between seasons, including:
 2. Processing promotions and relegations (moving players between league tables).
 """
 
-from dis import disco
 import logging
+import discord
 from typing import List, Dict, Any
 
 from postgrest import Timeout
@@ -35,6 +35,8 @@ class ResetConfirmView(discord.ui.View):
             await interaction.response.send_message(
                 "⛔ This is not your command!", ephemeral=True
             )
+            return False
+        return True
 
     @discord.ui.button(
         label="Yes, Restart the season.", style=discord.ButtonStyle.green
@@ -46,9 +48,9 @@ class ResetConfirmView(discord.ui.View):
         await interaction.response.defer()
         self.stop()
 
-    @discord.ui.button(lable="Cancel restart.", style=discord.ButtonStyle.red)
+    @discord.ui.button(label="Cancel restart.", style=discord.ButtonStyle.red)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.view = False
+        self.value = False
         await interaction.response.defer()
         self.stop()
 
@@ -171,7 +173,7 @@ async def seasonal_point_update():
                 print(f"Error sync leagues: {e}")
                 continue
             await seasonal_point_update_supabase.rpc(
-                "award_seasonal_points", {"league_table_name", a_league}
+                "award_seasonal_points", {"league_table_name": a_league}
             ).execute()
             print(f"Updated this season's winner points for {a_league}.")
     except Exception as e:
@@ -197,7 +199,9 @@ async def get_current_season():
             .execute()
         )
         if response.data:
+            print(response.data["season"])
             return response.data["season"]
+
     except Exception as e:
         print(f"Error at get_current_season() function: {e}")
     return None
@@ -235,12 +239,14 @@ async def mark_season_archived(season):
 
 async def duplicate_table(league, season):
     new_table = f"{league}_{season}"
+    print(new_table)
     duplicating_supabase = await create_supabase()
     try:
         response = await duplicating_supabase.rpc(
             "duplicate_table", {"source_table": league, "new_table_name": new_table}
         ).execute()
-        if response and response.data:
+        print(response)
+        if response and response.data is True:
             return True
         else:
             return False

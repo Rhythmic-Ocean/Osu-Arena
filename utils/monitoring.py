@@ -11,6 +11,7 @@ import datetime
 import supabase
 from werkzeug.wrappers import response
 import supaabse
+from zoneinfo import ZoneInfo
 from .core_v2 import (
     create_supabase,
     CHALLENGE_STATUS,
@@ -33,6 +34,7 @@ from .challenge_final import challenge_finish_point_distribution
 
 load_dotenv(dotenv_path="sec.env")
 redirect_url = "http://127.0.0.1:8080"  # not used directly, fine to keep
+
 
 last_checked_date = None
 cached_status = False
@@ -522,8 +524,9 @@ async def weekly_point_update(bot):
 
 async def to_trigger():
     global last_checked_date, cached_status
+    cdt_time = datetime.now(ZoneInfo("America/Chicago"))
     trigger_check_supabase = await create_supabase()
-    today = datetime.date.today()
+    today = cdt_time.weekday()
     if last_checked_date != today:
         try:
             response = (
@@ -539,7 +542,7 @@ async def to_trigger():
         except Exception as e:
             print(f"Error syncing with DB: {e}")
             return False  # Fail safe
-    if today.weekday() == 5:  # 6 is Sunday
+    if today == 0:
         if not cached_status:
             try:
                 await (
@@ -548,10 +551,11 @@ async def to_trigger():
                     .eq("variable", "done_updating_weekly_point")
                     .execute()
                 )
+                cached_status = True
+                return True
             except Exception as e:
                 print(f"Error putting done_updating_weekly_points to True {e}")
-            cached_status = True
-            return True
+                return False
     else:
         if cached_status:
             await (

@@ -23,7 +23,7 @@ from discord import app_commands
 )
 @app_commands.checks.has_any_role(s_role)
 async def session_restart(interaction: discord.Interaction):
-    interaction.response.defer()
+    await interaction.response.defer()
     view = ResetConfirmView(interaction)
     await interaction.followup.send(
         "⚠️ **WARNING** ⚠️\n"
@@ -36,10 +36,10 @@ async def session_restart(interaction: discord.Interaction):
     await view.wait()
 
     if view.value is None:
-        await interaction.followup("❌ **Timed out.** Operation cancelled.")
+        await interaction.followup.send("❌ **Timed out.** Operation cancelled.")
         return
     elif not view.value:
-        await interaction.followup("❌ **Operation cancelled** by user.")
+        await interaction.followup.send("❌ **Operation cancelled** by user.")
         return
 
     await interaction.followup.send(
@@ -47,7 +47,6 @@ async def session_restart(interaction: discord.Interaction):
     )
 
     person = None
-
     current = await get_current_season()
     if not current:
         await interaction.followup.send("No ongoing season.")
@@ -63,18 +62,32 @@ async def session_restart(interaction: discord.Interaction):
     await interaction.followup.send(f"Ending current season : Season {current}.")
 
     await interaction.followup.send("⏳Updating end of season points.")
-    await seasonal_point_update()
+    try:
+        await seasonal_point_update()
+    except Exception as e:
+        await interaction.followup.send(f"Error updating sesonal points {e}")
+        return
     await interaction.followup.send("✅End of season points have been distributed!")
 
     await interaction.followup.send("⏳Backing up seasonal points.")
-    await backup_seasonal_points(current)
+    try:
+        await backup_seasonal_points(current)
+    except Exception as e:
+        await interaction.followup.send(f"Error backing up sesonal points {e}")
+        return
     await interaction.followup.send("✅Seasonal points backed up!")
 
     await interaction.followup.send("⏳Resetting seasonal points.")
-    await reset_seasonal_points()
+    try:
+        await reset_seasonal_points()
+    except Exception as e:
+        await interaction.followup.send(f"Error resetting up sesonal points {e}")
+        return
     await interaction.followup.send("✅Seasonal Points have been reset.")
 
     for league in LEAGUE_MODES.values():
+        if league == LEAGUE_MODES[7]:
+            continue
         msg = await interaction.followup.send(
             f"⏳ Starting backup for **{league} League**. Please wait..."
         )

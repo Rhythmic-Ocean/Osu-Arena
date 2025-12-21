@@ -93,7 +93,7 @@ async def get_table_data(
         response = await get_current_points(TABLE_MODES[11])
     elif league == "s_points":
         if not stat:
-            response = await get_current_points(TABLE_MODES[12], stat)
+            response = await get_current_points(TABLE_MODES[12])
         else:
             response = await get_historical_points(stat)
     else:
