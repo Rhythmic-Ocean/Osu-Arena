@@ -3,19 +3,23 @@ from discord.ext import commands
 import discord
 from discord import app_commands
 
+
 @bot.tree.command(name="show", description="Show the league table", guild=GUILD)
 @app_commands.describe(leag="League name")
 async def show(interaction: discord.Interaction, leag: str):
     league = leag.capitalize()
     if league not in TABLE_MODES.values():
         await interaction.response.send_message(
-                "❌ Invalid league name. Use one of: " + ", ".join(TABLE_MODES.values()), ephemeral=True
-            )
+            "❌ Invalid league name. Use one of: " + ", ".join(TABLE_MODES.values()),
+            ephemeral=True,
+        )
         return
     if league == TABLE_MODES[7]:
         await interaction.response.send_message(
             "⚠ Ranker league has unfortunatly been deprecated."
         )
+        return
+        
     await interaction.response.defer()
     try:
         headers, rows = await get_table_data(league.lower())
@@ -30,15 +34,15 @@ async def show(interaction: discord.Interaction, leag: str):
 
     image_buf = render_table_image(headers, rows)
     file = discord.File(fp=image_buf, filename="table.png")
-    embed = discord.Embed(title=f"{league} League")
+    if league == TABLE_MODES[11]:
+        embed = discord.Embed(title="Universal Leadboard")
+    elif league == TABLE_MODES[12]:
+        embed = discord.Embed(title="Seasonal Leadboard")
+    else:
+        embed = discord.Embed(title=f"{league} League")
     embed.set_image(url="attachment://table.png")
     try:
         await interaction.followup.send(embed=embed, file=file)
     except Exception as e:
         await interaction.followup.send_message("⚠️ An unknown error occurred.")
         print(f"Unexpected error in /show: {e}")
-    
-
-
-
-

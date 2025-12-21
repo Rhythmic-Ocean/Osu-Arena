@@ -1,8 +1,8 @@
 """
 Core utility module.
 
-This module defines the essential parameters, objects, and configuration constants 
-required for the project's operation, including database clients, API authentication, 
+This module defines the essential parameters, objects, and configuration constants
+required for the project's operation, including database clients, API authentication,
 and static lookup dictionaries.
 """
 
@@ -30,15 +30,15 @@ intents.message_content = True
 intents.members = True
 
 # Initialize the Bot object.
-# Note: The prefix is primarily used for the '!session_restart' command; 
+# Note: The prefix is primarily used for the '!session_restart' command;
 # most user interactions occur via slash commands.
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Load environment variables from the configuration file.
 load_dotenv(dotenv_path="sec.env")
 
 # Discord Authentication Token.
-token = os.getenv('DISCORD_TOKEN')
+token = os.getenv("DISCORD_TOKEN")
 
 # -----------------------------------------------------------------------------
 # Constants & IDs
@@ -51,7 +51,8 @@ WELCOME_ID = 1366564371899224115
 TOP_PLAY_ID = 1448917430725513226
 
 # Admin role identifier used in session management.
-s_role = 'admin'
+s_role = "admin"
+add_point_role = "speed rank judge"
 
 # Generic Discord Object representing the target Guild.
 GUILD = discord.Object(id=GUILD_ID)
@@ -60,7 +61,7 @@ GUILD = discord.Object(id=GUILD_ID)
 # Logging & Authentication
 # -----------------------------------------------------------------------------
 
-logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode='w')
+logging.basicConfig(filename="core_v2.log", level=logging.DEBUG, filemode="w")
 
 # osu! API Credentials.
 client_id = int(os.getenv("AUTH_ID"))
@@ -84,7 +85,10 @@ redirect_url = "https://rt4d-production.up.railway.app/"
 auth = AsynchronousAuthHandler(client_id, client_secret, redirect_url, Scope.identify())
 
 # Asynchronous Client for interacting with the osu! API.
-client_updater = AsynchronousClient.from_credentials(client_id, client_secret, redirect_url)
+client_updater = AsynchronousClient.from_credentials(
+    client_id, client_secret, redirect_url
+)
+
 
 async def create_supabase() -> AsyncClient:
     """
@@ -101,6 +105,7 @@ async def create_supabase() -> AsyncClient:
         SUPABASE_KEY,
     )
 
+
 # -----------------------------------------------------------------------------
 # Lookup Dictionaries
 # -----------------------------------------------------------------------------
@@ -110,6 +115,7 @@ string representations for Leagues, Roles, Tables, and Statuses.
 """
 
 LEAGUE_MODES = {
+    9: "novice",
     1: "bronze",
     2: "silver",
     3: "gold",
@@ -118,7 +124,6 @@ LEAGUE_MODES = {
     6: "elite",
     7: "ranker",
     8: "master",
-    9: "novice"
 }
 
 ROLE_MODES = {
@@ -144,6 +149,8 @@ TABLE_MODES = {
     8: "Master",
     9: "Rivals",
     10: "Novice",
+    11: "Points",
+    12: "S_points",
 }
 
 CHALLENGE_STATUS = {
@@ -151,13 +158,7 @@ CHALLENGE_STATUS = {
     2: "Declined",
     3: "Unfinished",
     4: "Finished",
-    5: "Revoked"
+    5: "Revoked",
 }
 
-SEASON_STATUS = {
-    1: "Ongoing",
-    2: "Archived",
-    3: "DNE",
-    4: "Error"
-}
-
+SEASON_STATUS = {1: "Ongoing", 2: "Archived", 3: "DNE", 4: "Error"}
