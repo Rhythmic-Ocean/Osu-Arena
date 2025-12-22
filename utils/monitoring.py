@@ -475,7 +475,7 @@ async def weekly_point_update(bot):
         print("monitor_top_players: Guild not found.")
         return
 
-    channel = guild.get_channel(1366931199095865364)
+    channel = guild.get_channel(1366574172075196436)
     weekly_point_update_supabase = await create_supabase()
 
     try:
