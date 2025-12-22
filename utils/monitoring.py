@@ -73,8 +73,11 @@ async def monitor_database(bot: commands.Bot, channel_id: int) -> None:
         channel_id (int): The ID of the channel to send results to.
     """
     while True:
-        if await to_trigger():
-            await weekly_point_update(bot)
+        try:
+            if await to_trigger():
+                await weekly_point_update(bot)
+        except Exception as e:
+            print(f"Error in weekly trigger check: {e}")
         try:
             supabase = await create_supabase()
             try:
@@ -475,7 +478,7 @@ async def weekly_point_update(bot):
         print("monitor_top_players: Guild not found.")
         return
 
-    channel = guild.get_channel(1366574172075196436)
+    channel = guild.get_channel(1398919513877250129)
     weekly_point_update_supabase = await create_supabase()
 
     try:
@@ -524,7 +527,7 @@ async def weekly_point_update(bot):
 
 async def to_trigger():
     global last_checked_date, cached_status
-    cdt_time = datetime.now(ZoneInfo("America/Chicago"))
+    cdt_time = datetime.datetime.now(ZoneInfo("America/Chicago"))
     trigger_check_supabase = await create_supabase()
     today = cdt_time.weekday()
     if last_checked_date != today:
