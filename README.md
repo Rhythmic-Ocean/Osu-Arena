@@ -8,12 +8,10 @@
 
 ---
 
-## Recent (Dec 21 2025)
+## Recent (Dec 23 2025)
 
-- Updated session_reset to be a / command
-- Added support for points calculation and display, both sesonally and weekly (resets every Monday)
-- /session_reset can now perform backups, along with resets
-- Added /points command, to add/ remove points from players, restricted to admins and speed rank judges
+- Redoing bot in a seperate 'cleanup' branch
+- Done with bot.py, utils_v2/error_handler.py and enums/. WIP for utils_v2/monitor.py
 
 ---
 
