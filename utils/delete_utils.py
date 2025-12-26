@@ -10,7 +10,6 @@ async def remove_player(discord_id: int) -> bool:
     """
     supabase = await create_supabase()
     try:
-        # --- 1. Database Deletion ---
         response = await (
             supabase.table("discord_osu")
             .delete()
@@ -18,15 +17,12 @@ async def remove_player(discord_id: int) -> bool:
             .execute()
         )
 
-        # If no rows returned, user wasn't in DB.
         if not response.data:
             return False
 
-        # --- 2. Discord Cleanup ---
         try:
             guild = bot.get_guild(GUILD_ID)
             if guild:
-                # Try getting from cache, otherwise fetch from API
                 member = guild.get_member(discord_id)
                 if not member:
                     try:
@@ -38,11 +34,9 @@ async def remove_player(discord_id: int) -> bool:
                         member = None
 
                 if member:
-                    casual_role = discord.utils.get(guild.roles, name="Casual")
+                    casual_role = discord.utils.get(guild.roles, name="casual")
 
                     if casual_role:
-                        # KEY PART: roles=[casual_role] overwrites their entire role list.
-                        # nick=None removes their custom nickname.
                         await member.edit(nick=None, roles=[casual_role])
                         print(
                             f"✅ Wiped roles & nick for {member.name}, set to 'Casual'."
