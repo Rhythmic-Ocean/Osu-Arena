@@ -7,3 +7,8 @@ class ChallengeStatus(StrEnum):
     UNFINISHED = "Unfinished"
     FINISHED = "Finished"
     REVOKED = "Revoked"
+
+
+class SeasonStatus(StrEnum):
+    ARCHIVED = "Archived"
+    ONGOING = "Ongoing"

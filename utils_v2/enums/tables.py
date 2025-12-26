@@ -32,3 +32,32 @@ class TableMiscellaneous(StrEnum):
     DISCORD_OSU = "discord_osu"
     MESG_ID = "mesg_id"
     SEASONS = "seasons"
+
+
+class ArchivedTable(StrEnum):
+    NOVICE = "novice"
+    BRONZE = "bronze"
+    SILVER = "silver"
+    GOLD = "gold"
+    PLATINUM = "platinum"
+    DIAMOND = "diamond"
+    ELITE = "elite"
+    RANKER = "ranker"
+    MASTER = "master"
+    RIVALS = "rivals"
+    S_POINTS = "s_points"
+
+
+class ShowTable(StrEnum):
+    NOVICE = "novice"
+    BRONZE = "bronze"
+    SILVER = "silver"
+    GOLD = "gold"
+    PLATINUM = "platinum"
+    DIAMOND = "diamond"
+    ELITE = "elite"
+    RANKER = "ranker"
+    MASTER = "master"
+    RIVALS = "rivals"
+    S_POINTS = "s_points"
+    POINTS = "points"

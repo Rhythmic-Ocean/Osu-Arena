@@ -1,5 +1,6 @@
 from typing import Any
 import discord
+import datetime
 from discord.ext import commands, tasks
 from supabase import AsyncClient
 from utils_v2 import (
@@ -18,11 +19,11 @@ class Monitor(commands.Cog, name="monitor"):
     def __init__(self, bot: OsuArena, supabase_client: AsyncClient):
         self.bot = bot
         self.supabase_client = supabase_client
-        self.error_handler = self.bot.error_handler
+        self.log_handler = self.bot.log_handler
         self.db_handler = self.bot.db_handler
         self.osu_client = self.bot.osu_client
         self.renderer = Renderer(self.bot)
-        self.logger = self.error_handler.logger
+        self.logger = self.log_handler.logger
 
         self.monitor_database.start()
 
@@ -37,11 +38,130 @@ class Monitor(commands.Cog, name="monitor"):
             await self.monitor_rivals()
         except Exception as e:
             self.logger.error(f"CRITICAL: Monitor Loop crashed: {e}")
-            await self.error_handler.report_error("Monitor.monitor_database_loop", e)
+            await self.log_handler.report_error("Monitor.monitor_database_loop", e)
 
     @monitor_database.before_loop
     async def before_monitor_database(self):
         await self.bot.wait_until_ready()
+        await self.sync_ghost_users()
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        discord_id = member.id
+        user_name = member.name
+
+        self.log_handler.report_info(
+            f"User left: {user_name} ({discord_id}). Processing deletion..."
+        )
+
+        try:
+            response = await (
+                self.supabase_client.table("discord_osu")
+                .delete()
+                .eq("discord_id", discord_id)
+                .execute()
+            )
+
+            if response.data:
+                msg = f"Successfully wiped data for {user_name}."
+                self.log_handler.report_info(msg)
+
+                guild = member.guild
+                if not guild:
+                    self.logger.warning("Sync Error: Guild not found.")
+                    return
+                channel = guild.get_channel(ENV.BOT_UPDATES)
+
+                if channel:
+                    embed = discord.Embed(
+                        title="User Left & Data Wiped",
+                        description=f"**{user_name}** (`{discord_id}`) left the server.\nDeleted their record from `discord_osu`.",
+                        color=discord.Color.red(),
+                        timestamp=datetime.datetime.now(),
+                    )
+                    await channel.send(embed=embed)
+            else:
+                self.log_handler.report_info(
+                    f"User {user_name} left, but was not in the database."
+                )
+
+        except Exception as e:
+            await self.log_handler.report_error(
+                f"Monitor.on_member_remove({user_name})", e
+            )
+
+    async def sync_ghost_users(self) -> None:
+        guild = self.bot.guild
+        if not guild:
+            self.logger.warning("Sync Error: Guild not found.")
+            return
+
+        self.log_handler.report_info("🔄 Starting Ghost User Sync...")
+
+        if guild.member_count is not None and len(guild.members) < guild.member_count:
+            self.log_handler.report_info(
+                f"Caching members... ({len(guild.members)}/{guild.member_count})"
+            )
+            await guild.chunk()
+
+        current_member_ids = {member.id for member in guild.members}
+        deleted_users = []
+
+        try:
+            response = (
+                await self.supabase_client.table("discord_osu")
+                .select("discord_id, osu_username")
+                .execute()
+            )
+            db_users = response.data
+            ghosts = [u for u in db_users if u["discord_id"] not in current_member_ids]
+
+            if not ghosts:
+                self.log_handler.report_info("✅ Sync Complete: Database is clean.")
+                return
+
+            self.logger.warning(f"⚠ Found {len(ghosts)} ghost users. Cleaning up...")
+
+            for ghost in ghosts:
+                g_id = ghost["discord_id"]
+                g_name = ghost["osu_username"]
+
+                try:
+                    await (
+                        self.supabase_client.table("discord_osu")
+                        .delete()
+                        .eq("discord_id", g_id)
+                        .execute()
+                    )
+                    self.log_handler.report_info(
+                        f"Deleted ghost user {g_name} ({g_id})"
+                    )
+                    deleted_users.append(f"• **{g_name}** (`{g_id}`)")
+                except Exception as e:
+                    self.logger.error(f"Failed to delete ghost {g_name}: {e}")
+
+            # Send Report
+            if deleted_users:
+                channel = guild.get_channel(ENV.BOT_UPDATES)
+                if channel:
+                    user_list = "\n".join(deleted_users[:20])
+                    if len(deleted_users) > 20:
+                        user_list += f"\n...and {len(deleted_users) - 20} others."
+
+                    embed = discord.Embed(
+                        title="🧹 Database Cleanup Report",
+                        description=f"Found **{len(deleted_users)}** users in the database who are no longer in the server.\n\n**Deleted Users:**\n{user_list}",
+                        color=discord.Color.orange(),
+                        timestamp=datetime.datetime.now(),
+                    )
+                    await channel.send(embed=embed)
+
+        except Exception as e:
+            await self.log_handler.report_error("Monitor.sync_ghost_users", e)
+
+    # ------------------------------------------------------------------
+    # Existing Monitor Methods
+    # ------------------------------------------------------------------
 
     async def monitor_new_players(self):
         try:
@@ -58,11 +178,11 @@ class Monitor(commands.Cog, name="monitor"):
                     await self.give_role_nickname(player)
                     await self.announce_new_player(player)
                 except Exception as error:
-                    await self.error_handler.report_error(
+                    await self.log_handler.report_error(
                         "Monitor.monitor_new_players() loop", error
                     )
         except Exception as e:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.monitor_new_players() outer", e
             )
 
@@ -81,13 +201,11 @@ class Monitor(commands.Cog, name="monitor"):
                     top_play_id = play[DiscordOsuColumn.TOP_PLAY_ID]
                     await self.announce_new_top_play(top_play_id, discord_id)
                 except Exception as error:
-                    await self.error_handler.report_error(
+                    await self.log_handler.report_error(
                         "Monitor.monitor_top_plays() loop", error
                     )
         except Exception as e:
-            await self.error_handler.report_error(
-                "Monitor.monitor_top_plays() outer", e
-            )
+            await self.log_handler.report_error("Monitor.monitor_top_plays() outer", e)
 
     async def monitor_rivals(self):
         try:
@@ -100,11 +218,11 @@ class Monitor(commands.Cog, name="monitor"):
                         await self.end_challenge(row, winner, loser)
                         await self.send_announcement(row, winner, loser)
                 except Exception as e:
-                    await self.error_handler.report_error(
+                    await self.log_handler.report_error(
                         "Monitor.monitor_rivals() loop", e
                     )
         except Exception as e:
-            await self.error_handler.report_error("Monitor.monitor_rivals() outer", e)
+            await self.log_handler.report_error("Monitor.monitor_rivals() outer", e)
 
     async def give_role_nickname(self, player: list[dict[str, Any]]) -> None:
         discord_id = player[DiscordOsuColumn.DISCORD_ID]
@@ -133,7 +251,7 @@ class Monitor(commands.Cog, name="monitor"):
                 await member.add_roles(role_part)
 
         except Exception as error:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.give_role_nickname()",
                 error,
                 f"Failed giving roles to <@{discord_id}>",
@@ -142,7 +260,7 @@ class Monitor(commands.Cog, name="monitor"):
         try:
             await member.edit(nick=osu_username)
         except Exception as error:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.give_role_nickname()",
                 error,
                 f"Failed to change nickname for <@{discord_id}>",
@@ -155,7 +273,7 @@ class Monitor(commands.Cog, name="monitor"):
 
         if not guild:
             error = Exception("Can't find Guild for Monitor.announce_new_player()")
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.announce_new_player()",
                 error,
             )
@@ -168,7 +286,7 @@ class Monitor(commands.Cog, name="monitor"):
                     f"<@{discord_id}>, you have been assigned to {player_league.capitalize()} league."
                 )
         except Exception as error:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.announce_new_player()",
                 error,
                 f"Could not announce <@{discord_id}>'s arrival!",
@@ -183,7 +301,7 @@ class Monitor(commands.Cog, name="monitor"):
         guild = self.bot.guild
         if not guild:
             error = Exception("Can't find Guild for Monitor.announce_new_top_play()")
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.announce_new_top_play()", error
             )
             return
@@ -193,7 +311,7 @@ class Monitor(commands.Cog, name="monitor"):
             if channel:
                 await channel.send(content=content_str, embed=embed)
         except Exception as error:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.announce_new_top_play()", error
             )
 
@@ -251,7 +369,7 @@ class Monitor(commands.Cog, name="monitor"):
                 winner_uname, loser_uname, row[RivalsColumn.FOR_PP]
             )
         except Exception as e:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.end_challenge()",
                 e,
                 f"Failed updating Challenge Status for challenge_id {challenge_id}",
@@ -267,7 +385,7 @@ class Monitor(commands.Cog, name="monitor"):
         loser_id = await self.db_handler.get_discord_id(osu_username=loser_uname)
 
         if not winner_id or not loser_id:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.send_announcement()",
                 Exception("Could not find winner/loser Discord IDs"),
             )
@@ -276,15 +394,15 @@ class Monitor(commands.Cog, name="monitor"):
         msg_id = await self.db_handler.get_msg_id(row[RivalsColumn.CHALLENGE_ID])
         guild = self.bot.guild
         if not guild:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.send_announcement()",
                 Exception("Guild not found"),
             )
             return
 
-        channel = guild.get_channel(ENV.RIVALS_RES_ID)
+        channel = guild.get_channel(ENV.RIVAL_RESULTS_ID)
         if not channel:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.send_announcement()", Exception("Rivals Channel not found")
             )
             return
@@ -301,7 +419,7 @@ class Monitor(commands.Cog, name="monitor"):
                 except discord.NotFound:
                     await channel.send(content)
         except Exception as error:
-            await self.error_handler.report_error("Monitor.send_announcement", error)
+            await self.log_handler.report_error("Monitor.send_announcement", error)
 
         await self.point_distribution_announcement(winner_id, loser_id, for_pp)
 
@@ -315,7 +433,7 @@ class Monitor(commands.Cog, name="monitor"):
                 f"Unable to update rivarly_end points for {winner} and {loser}"
             )
         except Exception as error:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.challenge_finish_point_distribution()", error
             )
 
@@ -327,7 +445,7 @@ class Monitor(commands.Cog, name="monitor"):
             error = Exception(
                 "Can't find Guild for Monitor.point_distribution_announcement()"
             )
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.point_distribution_announcement()",
                 error,
             )
@@ -343,7 +461,7 @@ class Monitor(commands.Cog, name="monitor"):
             else:
                 raise Exception("Could not find Bot Updates channel!!")
         except Exception as error:
-            await self.error_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.point_distribution_announcement", error
             )
 

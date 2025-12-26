@@ -6,6 +6,7 @@ from .enums import (
     TableMiscellaneous,
     TablesLeaguesDeprecated,
     TablesPoints,
+    ArchivedTable,
     LeagueColumn,
     DiscordOsuColumn,
     MiscColumn,
@@ -22,9 +23,10 @@ from .enums import (
     ChallengeUserData,
     MessageIdData,
     SeasonData,
+    SeasonStatus,
 )
 
-from .error_handler import ErrorHandler
+from .log_handler import LogHandler
 
 from .db_handler import DatabaseHandler
 
@@ -33,12 +35,12 @@ from .renderer import BaseRenderer, Renderer
 __all__ = [
     # Table Namespaces
     "TableAll",
-    "ChallengeStatus",
     "TablesLeagues",
     "TablesRivals",
     "TableMiscellaneous",
     "TablesLeaguesDeprecated",
     "TablesPoints",
+    "ArchivedTable",
     # Column Enums (For Writing/Queries)
     "LeagueColumn",
     "DiscordOsuColumn",
@@ -57,11 +59,14 @@ __all__ = [
     "ChallengeUserData",
     "MessageIdData",
     "SeasonData",
-    # ErrorHandler
-    "ErrorHandler",
-    # DB_Getter
+    # LogHandler
+    "LogHandler",
+    # DB_Handler
     "DatabaseHandler",
     # Renderers
     "BaseRenderer",
     "Renderer",
+    # Status
+    "ChallengeStatus",
+    "SeasonStatus",
 ]

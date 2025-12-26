@@ -10,7 +10,7 @@ from osu import AsynchronousClient
 from supabase._async.client import AsyncClient
 import asyncio
 
-from utils_v2 import ErrorHandler, DatabaseHandler
+from utils_v2 import LogHandler, DatabaseHandler
 from utils_v2.osuapi_handler import OsuAPI_Handler
 
 
@@ -26,8 +26,8 @@ class OsuArena(commands.Bot):
             intents=intents,
             help_command=None,
         )
-        self.error_handler = ErrorHandler(self)
-        self.logger = self.error_handler.logger
+        self.log_handler = LogHandler(self)
+        self.logger = self.log_handler.logger
 
         self.db_handler = None
         self.supabase_client = None
@@ -45,12 +45,12 @@ class OsuArena(commands.Bot):
 
         await self.load_cogs()
 
-        self.tree.error(self.error_handler.on_command_error)
+        self.tree.error(self.log_handler.on_command_error)
 
     async def on_ready(self) -> None:
-        await self.error_handler.initiate_channel()
+        await self.log_handler.initiate_channel()
         self.logger.info("-------------------")
-        await self.error_handler.report_info("Bot is Ready and Online!")
+        await self.log_handler.report_info("Bot is Ready and Online!")
 
     async def load_cogs(self) -> None:
         self.logger.info("-------------------")

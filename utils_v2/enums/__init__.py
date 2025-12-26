@@ -4,6 +4,7 @@ from .tables import (
     TablesLeaguesDeprecated,
     TablesPoints,
     TablesRivals,
+    ArchivedTable,
 )
 
 from .tables_internals import (
@@ -24,17 +25,17 @@ from .tables_internals import (
     MessageIdData,
     SeasonData,
 )
-from .status import ChallengeStatus
+from .status import ChallengeStatus, SeasonStatus
 
 __all__ = [
     # Table Namespaces
     "TableAll",
-    "ChallengeStatus",
     "TablesLeagues",
     "TablesRivals",
     "TableMiscellaneous",
     "TablesLeaguesDeprecated",
     "TablesPoints",
+    "ArchivedTable",
     # Column Enums (For Writing/Queries)
     "LeagueColumn",
     "DiscordOsuColumn",
@@ -53,6 +54,9 @@ __all__ = [
     "ChallengeUserData",
     "MessageIdData",
     "SeasonData",
+    # Status
+    "ChallengeStatus",
+    "SeasonStatus",
 ]
 
 

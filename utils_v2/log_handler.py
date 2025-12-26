@@ -7,7 +7,7 @@ from discord.ext import commands
 from load_env import ENV
 
 
-class ErrorHandler:
+class LogHandler:
     class LoggingFormatter(logging.Formatter):
         # Colors
         black = "\x1b[30m"
