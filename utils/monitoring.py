@@ -201,6 +201,80 @@ async def send_winner_announcement(
                 )
 
 
+async def handle_member_leave(member: discord.Member) -> None:
+    """
+    Triggered when a member leaves the server.
+    Deletes them from the 'discord_osu' table.
+    Since ON DELETE CASCADE is enabled in the DB, this clears all their data.
+    """
+    discord_id = member.id
+    user_name = member.name
+
+    print(f"User left: {user_name} ({discord_id}). Processing deletion...")
+    logging.info(f"User left: {user_name} ({discord_id}). Processing deletion...")
+
+    supabase = await create_supabase()
+
+    try:
+        # Delete from the parent table (discord_osu)
+        response = await (
+            supabase.table("discord_osu")
+            .delete()
+            .eq("discord_id", discord_id)
+            .execute()
+        )
+
+        # Check if a row was actually deleted (list will be empty if user wasn't in DB)
+        if response.data:
+            logging.info(f"Successfully wiped data for {user_name}.")
+            print(f"Successfully wiped data for {user_name}.")
+        else:
+            logging.info(f"User {user_name} left, but was not in the database.")
+            print(f"User {user_name} left, but was not in the database.")
+
+    except Exception as e:
+        error_msg = f"DB Error while deleting leaver {user_name}: {e}"
+        logging.error(error_msg)
+        print(error_msg)
+
+
+async def handle_member_leave(member: discord.Member) -> None:
+    """
+    Triggered when a member leaves the server.
+    Deletes them from the 'discord_osu' table.
+    Since ON DELETE CASCADE is enabled in the DB, this clears all their data.
+    """
+    discord_id = member.id
+    user_name = member.name
+
+    print(f"User left: {user_name} ({discord_id}). Processing deletion...")
+    logging.info(f"User left: {user_name} ({discord_id}). Processing deletion...")
+
+    supabase = await create_supabase()
+
+    try:
+        # Delete from the parent table (discord_osu)
+        response = await (
+            supabase.table("discord_osu")
+            .delete()
+            .eq("discord_id", discord_id)
+            .execute()
+        )
+
+        # Check if a row was actually deleted (list will be empty if user wasn't in DB)
+        if response.data:
+            logging.info(f"Successfully wiped data for {user_name}.")
+            print(f"Successfully wiped data for {user_name}.")
+        else:
+            logging.info(f"User {user_name} left, but was not in the database.")
+            print(f"User {user_name} left, but was not in the database.")
+
+    except Exception as e:
+        error_msg = f"DB Error while deleting leaver {user_name}: {e}"
+        logging.error(error_msg)
+        print(error_msg)
+
+
 async def monitor_new_players(bot: commands.Bot) -> None:
     """
     Background task: Checks for 'new_player_announce' = True
@@ -316,7 +390,6 @@ async def monitor_top_plays(bot: commands.Bot) -> None:
         print("monitor_top_players: Guild not found.")
         return
 
-    # You might want a different channel for achievements?
     # If using the same welcome channel:
     channel = guild.get_channel(TOP_PLAY_ID)
 

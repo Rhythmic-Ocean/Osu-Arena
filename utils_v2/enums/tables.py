@@ -29,5 +29,6 @@ class TablesPoints(StrEnum):
 
 
 class TableMiscellaneous(StrEnum):
+    DISCORD_OSU = "discord_osu"
     MESG_ID = "mesg_id"
     SEASONS = "seasons"

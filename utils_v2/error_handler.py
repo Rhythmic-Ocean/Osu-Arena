@@ -107,6 +107,28 @@ class ErrorHandler:
             embed.add_field(name="Traceback", value=f"```py\n{trace}```", inline=False)
             await self.channel.send(embed=embed)
 
+    async def report_info(self, message: str, title: str = "ℹ️ System Info"):
+        self.logger.info(f"{title}: {message}")
+
+        if not self.channel:
+            return
+
+        embed = discord.Embed(
+            title=title,
+            color=discord.Color.blue(),  # Blue for info, Green for success
+            timestamp=datetime.datetime.now(datetime.UTC),
+        )
+
+        if len(message) > 4000:
+            embed.description = "Message too long to display. See attached file."
+            with io.BytesIO(message.encode()) as f:
+                await self.channel.send(
+                    embed=embed, file=discord.File(f, filename="info_log.txt")
+                )
+        else:
+            embed.description = message
+            await self.channel.send(embed=embed)
+
     async def on_command_error(
         self, ctx: commands.Context, error: commands.CommandError
     ):
