@@ -4,11 +4,13 @@ from .core_v2 import create_supabase, bot, GUILD_ID
 
 async def remove_player(discord_id: int) -> bool:
     """
-    1. Removes player from 'discord_osu' table.
-    2. If successful, strips ALL roles and assigns 'Casual'.
+    1. Deletes user from Supabase.
+    2. If successful, strips ALL roles (except managed ones) and assigns 'Casual'.
+    3. Resets their server nickname.
     """
     supabase = await create_supabase()
     try:
+        # --- 1. Database Deletion ---
         response = await (
             supabase.table("discord_osu")
             .delete()
@@ -16,35 +18,44 @@ async def remove_player(discord_id: int) -> bool:
             .execute()
         )
 
+        # If no rows returned, user wasn't in DB.
         if not response.data:
             return False
 
+        # --- 2. Discord Cleanup ---
         try:
             guild = bot.get_guild(GUILD_ID)
             if guild:
+                # Try getting from cache, otherwise fetch from API
                 member = guild.get_member(discord_id)
                 if not member:
                     try:
                         member = await guild.fetch_member(discord_id)
                     except discord.NotFound:
-                        print(f"User {discord_id} left server, skipping role strip.")
+                        print(
+                            f"User {discord_id} left server, skipping Discord cleanup."
+                        )
                         member = None
 
                 if member:
                     casual_role = discord.utils.get(guild.roles, name="Casual")
 
                     if casual_role:
-                        await member.edit(roles=[casual_role])
-                        print(f"✅ Stripped roles for {member.name}, gave 'Casual'.")
+                        # KEY PART: roles=[casual_role] overwrites their entire role list.
+                        # nick=None removes their custom nickname.
+                        await member.edit(nick=None, roles=[casual_role])
+                        print(
+                            f"✅ Wiped roles & nick for {member.name}, set to 'Casual'."
+                        )
                     else:
                         print("⚠️ Warning: 'Casual' role not found in server.")
 
         except discord.Forbidden:
             print(
-                f"❌ Bot lacks permissions to strip roles from {discord_id} (Target might be Admin)."
+                f"❌ Bot lacks permission to manage {discord_id} (User might be Admin or higher than Bot)."
             )
         except Exception as e:
-            print(f"⚠️ Discord error during delete: {e}")
+            print(f"⚠️ Discord error during cleanup: {e}")
 
         return True
 

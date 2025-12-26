@@ -8,13 +8,17 @@
 
 ---
 
+## Ongoing
+
+Project refactoring and cleanup are currently in progress on the cleanup branch.
+
+---
+
 ## Recent (Dec 25 2025)
 
 - Added /delete command that forcefully deletes a player from the database
 - Added a mechanism that automatically deletes a player from the database when they leave the Server
 - Everytime the bot starts up, it now first looks for any users in database and not in server, and deletes them
-
----
 
 ---
 
