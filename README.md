@@ -8,12 +8,11 @@
 
 ---
 
-## Recent (Dec 21 2025)
+## Recent (Dec 25 2025)
 
-- Updated session_reset to be a / command
-- Added support for points calculation and display, both sesonally and weekly (resets every Monday)
-- /session_reset can now perform backups, along with resets
-- Added /points command, to add/ remove points from players, restricted to admins and speed rank judges
+- Added /delete command that forcefully deletes a player from the database
+- Added a mechanism that automatically deletes a player from the database when they leave the Server
+- Everytime the bot starts up, it now first looks for any users in database and not in server, and deletes them
 
 ---
 
@@ -118,6 +117,15 @@ Admin-only command to reset the current session, create backups and reassign use
 Restricted to be used by Admin and Speed-rank-judge only
 Can add/ remove points for any user
 Effects both seasonal and universal points
+
+---
+
+/delete @user
+
+Admin-only command to forcefully delete a player from the database.
+
+- Wipes all user data (including Rivals history, scores, etc)
+- Strips all current league roles and assigns the Casual role
 
 ---
 

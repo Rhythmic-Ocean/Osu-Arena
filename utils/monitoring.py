@@ -195,10 +195,151 @@ async def send_winner_announcement(
                     content=f"<@{challenger}> vs <@{challenged}> | {pp}PP | Finished. WINNER: <@{winner}>"
                 )
             except discord.NotFound:
-                # Message was deleted, send a new one
                 await channel.send(
                     f"<@{challenger}> vs <@{challenged}> | {pp}PP | Finished. WINNER: <@{winner}>"
                 )
+
+
+async def sync_ghost_users(bot: commands.Bot) -> None:
+    """
+    Startup Task:
+    Compares the Database users vs. Current Discord members.
+    If a user is in the DB but NOT in the server, they are deleted.
+    Sends a report to a Discord channel if cleanup occurred.
+    """
+    REPORT_GUILD_ID = GUILD_ID
+    REPORT_CHANNEL_ID = 1398919513877250129
+
+    await bot.wait_until_ready()
+
+    target_guild_id = REPORT_GUILD_ID if REPORT_GUILD_ID else GUILD_ID
+    guild = bot.get_guild(target_guild_id)
+
+    if not guild:
+        print(f"Sync Error: Guild {target_guild_id} not found.")
+        return
+
+    print("🔄 Starting Ghost User Sync...")
+
+    if guild.member_count is not None and len(guild.members) < guild.member_count:
+        print(f"Caching members... ({len(guild.members)}/{guild.member_count})")
+        await guild.chunk()
+
+    current_member_ids = {member.id for member in guild.members}
+    supabase = await create_supabase()
+
+    deleted_users = []
+
+    try:
+        response = (
+            await supabase.table("discord_osu")
+            .select("discord_id, osu_username")
+            .execute()
+        )
+        db_users = response.data
+
+        ghosts = [u for u in db_users if u["discord_id"] not in current_member_ids]
+
+        if not ghosts:
+            print("✅ Sync Complete: Database is clean (No ghost users).")
+            return
+
+        print(f"⚠ Found {len(ghosts)} ghost users. Cleaning up...")
+
+        for ghost in ghosts:
+            g_id = ghost["discord_id"]
+            g_name = ghost["osu_username"]
+
+            try:
+                await (
+                    supabase.table("discord_osu")
+                    .delete()
+                    .eq("discord_id", g_id)
+                    .execute()
+                )
+                logging.info(f"Startup Sync: Deleted ghost user {g_name} ({g_id})")
+                print(f"❌ Deleted ghost: {g_name}")
+                deleted_users.append(f"• **{g_name}**")
+            except Exception as e:
+                logging.error(f"Failed to delete ghost {g_name}: {e}")
+
+        if deleted_users and REPORT_CHANNEL_ID:
+            channel = guild.get_channel(REPORT_CHANNEL_ID)
+            if channel:
+                count = len(deleted_users)
+                user_list = "\n".join(deleted_users[:20])
+
+                if count > 20:
+                    user_list += f"\n...and {count - 20} others."
+
+                embed = discord.Embed(
+                    title="🧹 Database Cleanup Report",
+                    description=f"Found **{count}** users in the database who are no longer in the server.\n\n**Deleted Users:**\n{user_list}",
+                    color=discord.Color.orange(),
+                    timestamp=datetime.datetime.now(),
+                )
+                await channel.send(embed=embed)
+            else:
+                print(f"Sync Error: Report channel {REPORT_CHANNEL_ID} not found.")
+
+    except Exception as e:
+        print(f"Error during Ghost Sync: {e}")
+
+
+async def handle_member_leave(member: discord.Member) -> None:
+    """
+    Triggered when a member leaves the server.
+    Deletes them from the 'discord_osu' table.
+    Announces the deletion in a log channel.
+    """
+
+    REPORT_CHANNEL_ID = 1398919513877250129
+    discord_id = member.id
+    user_name = member.name
+
+    print(f"User left: {user_name} ({discord_id}). Processing deletion...")
+    logging.info(f"User left: {user_name} ({discord_id}). Processing deletion...")
+
+    supabase = await create_supabase()
+
+    try:
+        response = await (
+            supabase.table("discord_osu")
+            .delete()
+            .eq("discord_id", discord_id)
+            .execute()
+        )
+
+        if response.data:
+            msg = f"Successfully wiped data for {user_name}."
+            logging.info(msg)
+            print(msg)
+
+            guild = member.guild
+            channel = guild.get_channel(REPORT_CHANNEL_ID)
+
+            if channel:
+                embed = discord.Embed(
+                    title="User Left & Data Wiped",
+                    description=f"**{user_name}** left the server.\nDeleted their record from Database.",
+                    color=discord.Color.red(),
+                    timestamp=datetime.datetime.now(),
+                )
+                try:
+                    await channel.send(embed=embed)
+                except Exception as e:
+                    print(f"Could not send log message: {e}")
+            else:
+                print(f"Log Channel {REPORT_CHANNEL_ID} not found.")
+
+        else:
+            logging.info(f"User {user_name} left, but was not in the database.")
+            print(f"User {user_name} left, but was not in the database.")
+
+    except Exception as e:
+        error_msg = f"DB Error while deleting leaver {user_name}: {e}"
+        logging.error(error_msg)
+        print(error_msg)
 
 
 async def monitor_new_players(bot: commands.Bot) -> None:

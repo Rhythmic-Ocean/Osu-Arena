@@ -30,7 +30,10 @@ from .monitoring import (
     monitor_new_players,
     give_role_nickname,
     monitor_top_plays,
+    handle_member_leave,
+    sync_ghost_users,
 )
+from .delete_utils import remove_player
 from .render import render_table_image
 from .reset_utils import (
     update_init_pp,

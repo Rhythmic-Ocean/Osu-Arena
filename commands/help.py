@@ -1,8 +1,6 @@
 from utils import bot, GUILD
 import discord
 
-bot.remove_command("help")
-
 
 @bot.tree.command(name="help", description="Shows all available commands", guild=GUILD)
 async def help(interaction: discord.Interaction):
@@ -67,6 +65,14 @@ async def help(interaction: discord.Interaction):
         value="**(Restricted)** Add/remove points for any user.\n"
         "- Affects both seasonal and universal points.\n"
         "- Only usable by Admin and Speed-rank-judge.",
+        inline=False,
+    )
+
+    embed.add_field(
+        name="🗑️ /delete @user",
+        value="**(Admin Only)** Forcefully delete a player from the database.\n"
+        "- Wipes all user data (Rivals, history, etc).\n"
+        "- Strips league roles and assigns **Casual** role.",
         inline=False,
     )
 

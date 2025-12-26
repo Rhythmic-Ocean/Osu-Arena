@@ -9,4 +9,5 @@ from . import (
     strip,
     update,
     points,
+    delete,
 )
