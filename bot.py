@@ -51,6 +51,19 @@ class OsuArena(commands.Bot):
         await self.log_handler.initiate_channel()
         self.logger.info("-------------------")
         await self.log_handler.report_info("Bot is Ready and Online!")
+        try:
+            target_guild = discord.Object(id=ENV.OSU_ARENA)
+
+            self.tree.copy_global_to(guild=target_guild)
+
+            synced = await self.tree.sync(guild=target_guild)
+
+            await self.log_handler.report_info(
+                f"Synced {len(synced)} commands to guild {ENV.OSU_ARENA}!",
+                "Commands Synced",
+            )
+        except Exception as e:
+            self.log_handler.report_error("OsuArena.on_ready()", e)
 
     async def load_cogs(self) -> None:
         self.logger.info("-------------------")

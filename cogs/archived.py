@@ -11,7 +11,7 @@ class Archives(commands.Cog):
         self.db_handler = bot.db_handler
         self.renderer = Renderer(bot)
 
-    @app_commands.command(name="archived", description="Shows archived tables")
+    @app_commands.command(name="test", description="test")
     @app_commands.describe(
         season="The finished season number", league="The league name"
     )
@@ -122,3 +122,4 @@ class Archives(commands.Cog):
 
 async def setup(bot: OsuArena):
     await bot.add_cog(Archives(bot))
+    print("Archives cog loaded")

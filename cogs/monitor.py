@@ -96,7 +96,7 @@ class Monitor(commands.Cog, name="monitor"):
             self.logger.warning("Sync Error: Guild not found.")
             return
 
-        self.log_handler.report_info("🔄 Starting Ghost User Sync...")
+        await self.log_handler.report_info("🔄 Starting Ghost User Sync...")
 
         if guild.member_count is not None and len(guild.members) < guild.member_count:
             self.log_handler.report_info(
@@ -117,7 +117,9 @@ class Monitor(commands.Cog, name="monitor"):
             ghosts = [u for u in db_users if u["discord_id"] not in current_member_ids]
 
             if not ghosts:
-                self.log_handler.report_info("✅ Sync Complete: Database is clean.")
+                await self.log_handler.report_info(
+                    "✅ Sync Complete: Database is clean."
+                )
                 return
 
             self.logger.warning(f"⚠ Found {len(ghosts)} ghost users. Cleaning up...")
