@@ -204,10 +204,30 @@ async def get_osu_uname(discord_uname: str) -> str | None:
             .eq("discord_username", discord_uname)
             .execute()
         )
+        print(response)
         if response.data:
             return response.data[0]["osu_username"]
         else:
             return None
+    except Exception as e:
+        logging.error(f"Error at get_osu_uname: {e}")
+        return None
+
+
+async def get_osu_uname_by_d_id(discord_id: int):
+    supabase = await create_supabase()
+    try:
+        response = (
+            await supabase.table("discord_osu")
+            .select("osu_username")
+            .eq("discord_id", discord_id)
+            .execute()
+        )
+        print(response)
+        if response.data:
+            return response.data[0]["osu_username"]
+        else:
+            raise Exception("Error at get_osu_uname")
     except Exception as e:
         logging.error(f"Error at get_osu_uname: {e}")
         return None

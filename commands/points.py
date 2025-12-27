@@ -2,6 +2,8 @@ from utils import bot, GUILD, s_role, add_point_role, add_points, get_osu_uname
 import discord
 from discord import app_commands
 
+from utils.db_getter import get_osu_uname_by_d_id
+
 
 @bot.tree.command(name="points", description="Modify a player's point", guild=GUILD)
 @app_commands.describe(
@@ -11,27 +13,36 @@ from discord import app_commands
 @app_commands.checks.has_any_role(add_point_role, s_role)
 async def points(interaction: discord.Interaction, user: discord.Member, points: int):
     await interaction.response.defer()
-    user_name = user.name
-    osu_username = await get_osu_uname(user_name)
+
+    user_id = user.id
+    print(user.name)
+    osu_username = await get_osu_uname_by_d_id(user_id)
+    print(osu_username)
     response = await add_points(osu_username, points)
+
     if response:
         new_seasonal_points = response.get("new_seasonal_points")
         new_points = response.get("new_points")
+
+        # 1. Public confirmation
         await interaction.followup.send(
-            f"✅{points} points modification done for <@{user.id}>\n"
+            f"✅ {points} points modification done for <@{user.id}>\n"
             f"Total points : **{new_points}**, Total Seasonal Points : **{new_seasonal_points}**"
         )
-    else:
-        await interaction.response.send_message(f"❌The update for <@{user.id}>")
 
+        MY_ID = 367680834322563074
+        try:
+            admin_user = await bot.fetch_user(MY_ID)
 
-@points.error
-async def points_error(interaction: discord.Interaction, error):
-    # NOTE: The error type changes to 'MissingAnyRole' (singular 'Any')
-    if isinstance(error, app_commands.MissingAnyRole):
-        await interaction.response.send_message(
-            "❌ Access Denied. You need one of the allowed roles (admin or speed rank judge).",
-            ephemeral=True,
-        )
+            await admin_user.send(
+                f"📝 **Audit Log**\n"
+                f"**Admin:** {interaction.user.name} (ID: {interaction.user.id})\n"
+                f"**Action:** Modified points for {user.name}\n"
+                f"**Amount:** {points}\n"
+                f"**New Total:** {new_points}"
+            )
+        except Exception as e:
+            print(f"Failed to DM admin log: {e}")
+
     else:
-        print(f"An error occurred: {error}")
+        await interaction.followup.send(f"❌ The update failed for <@{user.id}>")
