@@ -163,7 +163,7 @@ class LeaderboardRenderer(BaseRenderer):
     TEXT_COLOR = "white"
     FONT_SIZE = 14
 
-    def render_image(
+    async def render_image(
         self, headers: List[str], rows: List[Tuple[Any, ...]]
     ) -> Optional[BytesIO]:
         if not rows:

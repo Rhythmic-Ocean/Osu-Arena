@@ -43,7 +43,6 @@ class Monitor(commands.Cog, name="monitor"):
     @monitor_database.before_loop
     async def before_monitor_database(self):
         await self.bot.wait_until_ready()
-        await self.sync_ghost_users()
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
@@ -89,81 +88,6 @@ class Monitor(commands.Cog, name="monitor"):
             await self.log_handler.report_error(
                 f"Monitor.on_member_remove({user_name})", e
             )
-
-    async def sync_ghost_users(self) -> None:
-        guild = self.bot.guild
-        if not guild:
-            self.logger.warning("Sync Error: Guild not found.")
-            return
-
-        await self.log_handler.report_info("🔄 Starting Ghost User Sync...")
-
-        if guild.member_count is not None and len(guild.members) < guild.member_count:
-            self.log_handler.report_info(
-                f"Caching members... ({len(guild.members)}/{guild.member_count})"
-            )
-            await guild.chunk()
-
-        current_member_ids = {member.id for member in guild.members}
-        deleted_users = []
-
-        try:
-            response = (
-                await self.supabase_client.table("discord_osu")
-                .select("discord_id, osu_username")
-                .execute()
-            )
-            db_users = response.data
-            ghosts = [u for u in db_users if u["discord_id"] not in current_member_ids]
-
-            if not ghosts:
-                await self.log_handler.report_info(
-                    "✅ Sync Complete: Database is clean."
-                )
-                return
-
-            self.logger.warning(f"⚠ Found {len(ghosts)} ghost users. Cleaning up...")
-
-            for ghost in ghosts:
-                g_id = ghost["discord_id"]
-                g_name = ghost["osu_username"]
-
-                try:
-                    await (
-                        self.supabase_client.table("discord_osu")
-                        .delete()
-                        .eq("discord_id", g_id)
-                        .execute()
-                    )
-                    self.log_handler.report_info(
-                        f"Deleted ghost user {g_name} ({g_id})"
-                    )
-                    deleted_users.append(f"• **{g_name}** (`{g_id}`)")
-                except Exception as e:
-                    self.logger.error(f"Failed to delete ghost {g_name}: {e}")
-
-            # Send Report
-            if deleted_users:
-                channel = guild.get_channel(ENV.BOT_UPDATES)
-                if channel:
-                    user_list = "\n".join(deleted_users[:20])
-                    if len(deleted_users) > 20:
-                        user_list += f"\n...and {len(deleted_users) - 20} others."
-
-                    embed = discord.Embed(
-                        title="🧹 Database Cleanup Report",
-                        description=f"Found **{len(deleted_users)}** users in the database who are no longer in the server.\n\n**Deleted Users:**\n{user_list}",
-                        color=discord.Color.orange(),
-                        timestamp=datetime.datetime.now(),
-                    )
-                    await channel.send(embed=embed)
-
-        except Exception as e:
-            await self.log_handler.report_error("Monitor.sync_ghost_users", e)
-
-    # ------------------------------------------------------------------
-    # Existing Monitor Methods
-    # ------------------------------------------------------------------
 
     async def monitor_new_players(self):
         try:

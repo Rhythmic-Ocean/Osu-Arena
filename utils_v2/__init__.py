@@ -7,6 +7,7 @@ from .enums import (
     TablesLeaguesDeprecated,
     TablesPoints,
     ArchivedTable,
+    ShowTable,
     LeagueColumn,
     DiscordOsuColumn,
     MiscColumn,
@@ -26,6 +27,8 @@ from .enums import (
     SeasonStatus,
 )
 
+from .challenger_viewer import ChallengeView
+
 from .log_handler import LogHandler
 
 from .db_handler import DatabaseHandler
@@ -41,6 +44,7 @@ __all__ = [
     "TablesLeaguesDeprecated",
     "TablesPoints",
     "ArchivedTable",
+    "ShowTable",
     # Column Enums (For Writing/Queries)
     "LeagueColumn",
     "DiscordOsuColumn",
@@ -69,4 +73,6 @@ __all__ = [
     # Status
     "ChallengeStatus",
     "SeasonStatus",
+    # Challenger_Viewer
+    "ChallengeView",
 ]

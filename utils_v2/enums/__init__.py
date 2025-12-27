@@ -5,6 +5,7 @@ from .tables import (
     TablesPoints,
     TablesRivals,
     ArchivedTable,
+    ShowTable,
 )
 
 from .tables_internals import (
@@ -36,6 +37,7 @@ __all__ = [
     "TablesLeaguesDeprecated",
     "TablesPoints",
     "ArchivedTable",
+    "ShowTable",
     # Column Enums (For Writing/Queries)
     "LeagueColumn",
     "DiscordOsuColumn",
