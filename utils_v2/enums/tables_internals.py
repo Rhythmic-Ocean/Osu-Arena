@@ -12,6 +12,7 @@ class LeagueColumn(StrEnum):
     ID = "id"
     PERCENTAGE_CHANGE = "percentage_change"
     II = "ii"
+    DISCORD_ID = "discord_id"
 
 
 class LeagueData(TypedDict):
@@ -83,6 +84,7 @@ class HistoricalPointsColumn(StrEnum):
     ID = "id"
     DISCORD_USERNAME = "discord_username"
     OSU_USERNAME = "osu_username"
+    DISCORD_ID = "discord_id"
 
 
 class HistoricalPointsData(TypedDict, total=False):
@@ -98,6 +100,7 @@ class ChallengeUserColumn(StrEnum):
     CHALLENGE_ID = "challenge_id"
     INITIAL_PP = "initial_pp"
     CURRENT_PP = "current_pp"
+    DISCORD_ID = "discord_id"
 
 
 class ChallengeUserData(TypedDict, total=False):

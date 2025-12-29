@@ -25,3 +25,5 @@ class ENV:
     BOT_LOGS = int(os.getenv("BOT_LOGS"))
     BOT_UPDATES = int(os.getenv("BOT_UPDATES"))
     REDIRECT_URL = os.getenv("REDIRECT_URL")
+    REQ_ROLE = os.getenv("REQ_ROLE")
+    REQ_ROLE_POINTS = os.getenv("REQ_ROLE_POINTS")

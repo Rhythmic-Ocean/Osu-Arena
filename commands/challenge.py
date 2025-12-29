@@ -1,7 +1,18 @@
 from utils import (
-    bot, ROLE_MODES, ChallengeView, check_challenger_challenges, challenge_accepted, get_pp,
-    RIVAL_RESULTS_ID, challenge_allowed, log_rivals, challenge_declined, store_msg_id,
-    check_league, revoke_success, GUILD
+    bot,
+    ROLE_MODES,
+    ChallengeView,
+    check_challenger_challenges,
+    challenge_accepted,
+    get_pp,
+    RIVAL_RESULTS_ID,
+    challenge_allowed,
+    log_rivals,
+    challenge_declined,
+    store_msg_id,
+    check_league,
+    revoke_success,
+    GUILD,
 )
 import discord
 from discord import app_commands
@@ -9,7 +20,10 @@ from discord import app_commands
 MIN_PP = 250
 MAX_PP = 750
 
-@bot.tree.command(name="challenge", description="Challenge a user in your league", guild=GUILD)
+
+@bot.tree.command(
+    name="challenge", description="Challenge a user in your league", guild=GUILD
+)
 @app_commands.describe(player="Player to challenge", pp="Performance points (250–750)")
 async def challenge(interaction: discord.Interaction, player: discord.Member, pp: int):
     challenger = interaction.user
@@ -21,7 +35,7 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
     if not (MIN_PP <= pp <= MAX_PP):
         await interaction.response.send_message("❌ PP must be between 250 and 750.")
         return
-    
+
     await interaction.response.defer()
 
     try:
@@ -31,7 +45,9 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
         return
 
     if number_of_challenges >= 3:
-        await interaction.followup.send("❌ You already have 3 active or pending challenges.")
+        await interaction.followup.send(
+            "❌ You already have 3 active or pending challenges."
+        )
         return
     try:
         number_of_challenges = await check_challenger_challenges(player.name)
@@ -41,7 +57,9 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
     n = player.mention
 
     if number_of_challenges >= 3:
-        await interaction.followup.send(f"❌ {n} already have 3 active or pending challenges. Please challenge someone else")
+        await interaction.followup.send(
+            f"❌ {n} already have 3 active or pending challenges. Please challenge someone else"
+        )
         return
 
     challenger_role = None
@@ -58,26 +76,38 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
         await interaction.followup.send("❌ You have not been assigned a league role.")
         return
     if not challenged_role:
-        await interaction.followup.send(f"❌ {player.display_name} has not been assigned a league.")
+        await interaction.followup.send(
+            f"❌ {player.display_name} has not been assigned a league."
+        )
         return
     if challenged_role != challenger_role:
-        await interaction.followup.send("❌ You can only challenge players in your own league.")
+        await interaction.followup.send(
+            "❌ You can only challenge players in your own league."
+        )
         return
 
     # League verification
     bool1 = await check_league(challenger.name, challenger_role)
     bool2 = await check_league(player.name, challenger_role)
     if not bool1:
-        await interaction.followup.send("❌ Your league in the DB doesn't match your role. Ask admin.")
+        await interaction.followup.send(
+            "❌ Your league in the DB doesn't match your role. Ask admin."
+        )
         return
     if not bool2:
-        await interaction.followup.send(f"⚠️ {player.mention}'s role and DB league don't match. Ask admin.")
+        await interaction.followup.send(
+            f"⚠️ {player.mention}'s role and DB league don't match. Ask admin."
+        )
 
     # Check allowance
     try:
-        allowance = await challenge_allowed(challenger.name, player.name, challenger_role)
+        allowance = await challenge_allowed(
+            challenger.name, player.name, challenger_role
+        )
     except Exception as e:
-        await interaction.followup.send(f"❌ Error while checking allowance: {e}", ephemeral=True)
+        await interaction.followup.send(
+            f"❌ Error while checking allowance: {e}", ephemeral=True
+        )
         return
 
     allowance_messages = {
@@ -85,7 +115,7 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
         3: f"❌ You already have an ongoing challenge with {player.mention}.",
         4: f"❌ You can only challenge the same player once per day.",
         5: f"❌ One of you isn't linked to the database. Please contact an admin.",
-        6: f"❌ Internal error occurred. Please contact the dev."
+        6: f"❌ Internal error occurred. Please contact the dev.",
     }
     if allowance in allowance_messages:
         await interaction.followup.send(allowance_messages[allowance])
@@ -93,19 +123,23 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
 
     # Log challenge
     try:
-        challenge_id = await log_rivals(challenger_role, challenger.name, player.name, pp)
+        challenge_id = await log_rivals(
+            challenger_role, challenger.name, player.name, pp
+        )
     except Exception as e:
         await interaction.followup.send(f"❌ Error logging challenge: {e}")
         return
 
-    await interaction.followup.send(f"{challenger.mention} has challenged {player.mention} for {pp}pp.")
+    await interaction.followup.send(
+        f"{challenger.mention} has challenged {player.mention} for {pp}pp."
+    )
 
     # Send DM to challenged player
     try:
         view = ChallengeView(challenged=player)
         await player.send(
             f"You have been challenged by {challenger.display_name} for {pp}pp in the **{challenger_role}** league.\nDo you accept?",
-            view=view
+            view=view,
         )
     except discord.Forbidden:
         await interaction.followup.send("❌ Challenge failed. Player has DMs disabled.")
@@ -122,8 +156,9 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
             )
             await store_msg_id(challenge_id, challenge_request.id)
         except discord.Forbidden:
-            await interaction.followup.send(f"⚠️ Could not post to {rival_results_channel.mention}. Check bot permissions.")
-
+            await interaction.followup.send(
+                f"⚠️ Could not post to {rival_results_channel.mention}. Check bot permissions."
+            )
 
     # Get PP for final message
     try:
@@ -136,33 +171,52 @@ async def challenge(interaction: discord.Interaction, player: discord.Member, pp
     try:
         await view.wait()
     except Exception as e:
-        await interaction.followup.send(f"❌ Error while waiting for challenge decision: {e}")
+        await interaction.followup.send(
+            f"❌ Error while waiting for challenge decision: {e}"
+        )
         return
 
     if view.response is None:
         try:
-            await revoke_success(challenge_id)      
-            await interaction.followup.send(f"❌ {player.mention} didn’t respond in time. Challenge expired.")
+            await revoke_success(challenge_id)
+            await interaction.followup.send(
+                f"❌ {player.mention} didn’t respond in time. Challenge expired."
+            )
             if challenge_request:
                 try:
-                    await challenge_request.edit(content=f"{challenger.mention} vs {player.mention} | Revoked")
+                    await challenge_request.edit(
+                        content=f"{challenger.mention} vs {player.mention} | Revoked"
+                    )
                 except discord.Forbidden:
-                    await interaction.followup.send(f"⚠️ Could not edit challenge message in {rival_results_channel.mention}. Check bot permissions.")
+                    await interaction.followup.send(
+                        f"⚠️ Could not edit challenge message in {rival_results_channel.mention}. Check bot permissions."
+                    )
                 except Exception as e:
-                    await interaction.followup.send(f"❌ Error editing challenge message: {e}")
+                    await interaction.followup.send(
+                        f"❌ Error editing challenge message: {e}"
+                    )
         except discord.errors.InteractionResponded:
-            print(f"Interaction already responded for challenge {challenge_id}. Skipping followup.")
+            print(
+                f"Interaction already responded for challenge {challenge_id}. Skipping followup."
+            )
         except Exception as e:
             await interaction.followup.send(f"❌ Error handling challenge timeout: {e}")
-    
+
     elif view.response:
-        await interaction.followup.send(f"✅ {player.mention} accepted your challenge! Type `/show rivals` to view it.")
+        await interaction.followup.send(
+            f"✅ {player.mention} accepted your challenge! Type `/show rivals` to view it."
+        )
         await challenge_accepted(challenge_id)
         if challenge_request:
-            await challenge_request.edit(content=f"{challenger.mention} vs {player.mention} | {pp}PP | ⏳ Unfinished")
+            await challenge_request.edit(
+                content=f"{challenger.mention} vs {player.mention} | {pp}PP | ⏳ Unfinished"
+            )
     else:
-        await interaction.followup.send(f"❌ {player.display_name} declined your challenge.")
+        await interaction.followup.send(
+            f"❌ {player.display_name} declined your challenge."
+        )
         if challenge_request:
-            await challenge_request.edit(content=f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) | {pp}PP | ❌ Declined")
+            await challenge_request.edit(
+                content=f"{challenger.mention}({challenger_pp}) vs {player.mention}({challenged_pp}) | {pp}PP | ❌ Declined"
+            )
         await challenge_declined(challenge_id)
-

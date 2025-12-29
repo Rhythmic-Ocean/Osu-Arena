@@ -26,7 +26,7 @@ from .tables_internals import (
     MessageIdData,
     SeasonData,
 )
-from .status import ChallengeStatus, SeasonStatus
+from .status import ChallengeStatus, SeasonStatus, ChallengeFailed, FuncStatus
 
 __all__ = [
     # Table Namespaces
@@ -59,6 +59,8 @@ __all__ = [
     # Status
     "ChallengeStatus",
     "SeasonStatus",
+    "ChallengeFailed",
+    "FuncStatus",
 ]
 
 

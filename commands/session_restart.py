@@ -159,7 +159,7 @@ async def session_restart(interaction: discord.Interaction):
 async def session_restart_error(interaction: discord.Interaction, error):
     if isinstance(error, app_commands.MissingAnyRole):
         await interaction.response.send_message(
-            "❌ Access Denied. You need one of the allowed roles (admin or speed rank judge).",
+            "❌ Access Denied. You need one of the allowed roles (admin).",
             ephemeral=True,
         )
     else:

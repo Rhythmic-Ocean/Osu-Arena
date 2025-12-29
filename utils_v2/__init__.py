@@ -25,15 +25,19 @@ from .enums import (
     MessageIdData,
     SeasonData,
     SeasonStatus,
+    ChallengeFailed,
+    FuncStatus,
 )
 
-from .challenger_viewer import ChallengeView
+from .challenger_viewer import UnifiedChallengeView
 
 from .log_handler import LogHandler
 
 from .db_handler import DatabaseHandler
 
 from .renderer import BaseRenderer, Renderer
+
+from .reset_utils import ResetConfirmView
 
 __all__ = [
     # Table Namespaces
@@ -73,6 +77,9 @@ __all__ = [
     # Status
     "ChallengeStatus",
     "SeasonStatus",
-    # Challenger_Viewer
-    "ChallengeView",
+    "ChallengeFailed",
+    "FuncStatus",
+    # Viewer
+    "UnifiedChallengeView",
+    "ResetConfirmView",
 ]

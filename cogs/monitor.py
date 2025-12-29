@@ -1,4 +1,5 @@
-from typing import Any
+from __future__ import annotations
+from typing import Any, TYPE_CHECKING
 import discord
 import datetime
 from discord.ext import commands, tasks
@@ -12,7 +13,9 @@ from utils_v2 import (
     Renderer,
 )
 from load_env import ENV
-from bot import OsuArena
+
+if TYPE_CHECKING:
+    from bot import OsuArena
 
 
 class Monitor(commands.Cog, name="monitor"):

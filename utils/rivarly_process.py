@@ -194,4 +194,3 @@ async def store_msg_id(challenge_id: int, msg_id: int) -> None:
         )
     except Exception as e:
         logging.error(f"Error when storing mesg_id: {e}")
-

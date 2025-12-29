@@ -1,14 +1,23 @@
+from __future__ import annotations
+
 import discord
 from discord import app_commands
 from discord.ext import commands
-from bot import OsuArena
+from typing import TYPE_CHECKING, Optional, cast
+
 from load_env import ENV
-from utils_v2.enums import ChallengeStatus
-from utils_v2.enums.tables import TablesLeagues
-from utils_v2 import ChallengeView
+from utils_v2 import (
+    ChallengeFailed,
+    UnifiedChallengeView,
+    TablesLeagues,
+)
+
+if TYPE_CHECKING:
+    from bot import OsuArena
 
 MIN_PP = 250
 MAX_PP = 750
+MAX_ACTIVE_CHALLENGES = 3
 
 
 class Challenge(commands.Cog):
@@ -26,12 +35,18 @@ class Challenge(commands.Cog):
     async def challenge(
         self, interaction: discord.Interaction, player: discord.Member, pp: int
     ):
-        challenger = interaction.user
-        challenged = player.user
+        challenger = cast(discord.Member, interaction.user)
+        target = player
 
-        if challenger.id == challenged.id:
+        if challenger.id == target.id:
             await interaction.response.send_message(
                 "❌ You cannot challenge yourself!", ephemeral=True
+            )
+            return
+
+        if target.bot:
+            await interaction.response.send_message(
+                "❌ You cannot challenge a bot!", ephemeral=True
             )
             return
 
@@ -41,183 +56,162 @@ class Challenge(commands.Cog):
             )
             return
 
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=False)
 
-        shared_league = self._find_shared_league(challenger, challenged)
-
+        shared_league = self._find_shared_league(challenger, target)
         if not shared_league:
             await interaction.followup.send(
-                "❌ You and the target must have the same League Role to challenge."
+                "❌ You and the target must have the same League Role to challenge.",
+                ephemeral=True,
             )
             return
 
+        is_eligible = await self._check_eligibility(
+            interaction, challenger, target, shared_league
+        )
+        if not is_eligible:
+            return
+
         try:
-            if await self.db_handler.get_active_challenge_count(challenger.id) >= 3:
-                await interaction.followup.send(
-                    "❌ You already have 3 active/pending challenges.", ephemeral=True
-                )
-                return
-
-            if await self.db_handler.get_active_challenge_count(player.id) >= 3:
-                await interaction.followup.send(
-                    f"❌ {player.mention} already has 3 active/pending challenges.",
-                    ephemeral=True,
-                )
-                return
-
-            if not await self.db_handler.validate_user_league(
-                challenger.id, shared_league
-            ):
-                await interaction.followup.send(
-                    "❌ Your database league does not match your role. Contact Admin.",
-                    ephemeral=True,
-                )
-                return
-
-            if not await self.db_handler.validate_user_league(player.id, shared_league):
-                await interaction.followup.send(
-                    f"❌ {player.mention}'s database league does not match their role.",
-                    ephemeral=True,
-                )
-                return
-
-            eligibility_code = await self.db_handler.check_challenge_eligibility(
-                challenger.id, player.id
+            challenge_id = await self.db_handler.log_rivals(
+                challenger.id, target.id, pp, shared_league
             )
-            if eligibility_code != 0:
-                await self._handle_eligibility_error(
-                    interaction, eligibility_code, player
-                )
-                return
+            if challenge_id is None:
+                raise Exception("Database returned None for challenge_id")
+
+            await self._distribute_challenge(
+                interaction, challenger, target, pp, shared_league, challenge_id
+            )
 
         except Exception as e:
-            await self.log_handler.report_error("Challenge Command Logic", e)
+            await self.log_handler.report_error("Challenge Command", e)
             await interaction.followup.send(
                 "❌ Internal database error. Please try again later.", ephemeral=True
             )
-            return
-
-        try:
-            challenge_id = await self.db_handler.create_challenge(
-                challenger_id=challenger.id,
-                challenged_id=player.id,
-                league=shared_league,
-                pp=pp,
-            )
-        except Exception as e:
-            await self.log_handler.report_error("Create Challenge DB", e)
-            await interaction.followup.send("❌ Failed to create challenge record.")
-            return
-
-        await self._process_challenge_flow(
-            interaction, challenger, player, pp, shared_league, challenge_id
-        )
 
     def _find_shared_league(
-        self, challenger: discord.Member, challenged: discord.Member
+        self, user1: discord.Member, user2: discord.Member
     ) -> str | None:
+        """Returns the league name common to both users, or None."""
         valid_leagues = {t.value.lower() for t in TablesLeagues}
 
-        user1_leagues = {
-            r.name.lower() for r in challenger.roles if r.name.lower() in valid_leagues
-        }
-        user2_leagues = {
-            r.name.lower() for r in challenged.roles if r.name.lower() in valid_leagues
-        }
+        def get_leagues(m):
+            return {r.name.lower() for r in m.roles if r.name.lower() in valid_leagues}
 
-        common = user1_leagues.intersection(user2_leagues)
+        common = get_leagues(user1).intersection(get_leagues(user2))
         return common.pop().capitalize() if common else None
 
-    async def _handle_eligibility_error(self, interaction, code, player):
-        messages = {
-            2: f"❌ You already have a pending challenge with {player.mention}.",
-            3: f"❌ You already have an ongoing challenge with {player.mention}.",
-            4: "❌ You can only challenge the same player once per day.",
-            5: "❌ One of you isn't properly linked in the database.",
-        }
-        msg = messages.get(code, "❌ Challenge not allowed (Unknown Reason).")
-        await interaction.followup.send(msg, ephemeral=True)
+    async def _check_eligibility(
+        self,
+        interaction: discord.Interaction,
+        p1: discord.Member,
+        p2: discord.Member,
+        league: str,
+    ) -> bool:
+        """Performs all DB checks. Returns True if challenge can proceed, False if error sent."""
 
-    async def _process_challenge_flow(
-        self, interaction, challenger, player, pp, league, challenge_id
+        c1_count = await self.db_handler.get_active_challenge_count(p1.id)
+        c2_count = await self.db_handler.get_active_challenge_count(p2.id)
+
+        if c1_count is None or c2_count is None:
+            raise Exception("Failed to fetch challenge counts")
+
+        if c1_count >= MAX_ACTIVE_CHALLENGES:
+            await interaction.followup.send(
+                "❌ You already have 3 active/pending challenges.", ephemeral=True
+            )
+            return False
+        if c2_count >= MAX_ACTIVE_CHALLENGES:
+            await interaction.followup.send(
+                f"❌ {p2.mention} already has 3 active/pending challenges.",
+                ephemeral=True,
+            )
+            return False
+
+        if not await self.db_handler.validate_user_league(p1.id, league):
+            await interaction.followup.send(
+                "❌ Your database league does not match your role. Contact Admin.",
+                ephemeral=True,
+            )
+            return False
+        if not await self.db_handler.validate_user_league(p2.id, league):
+            await interaction.followup.send(
+                f"❌ {p2.mention}'s database league does not match their role.",
+                ephemeral=True,
+            )
+            return False
+
+        status = await self.db_handler.check_challenge_eligibility(p1.id, p2.id)
+        if status != ChallengeFailed.GOOD:
+            msgs = {
+                ChallengeFailed.PENDING: f"❌ You already have a pending challenge with {p2.mention}.",
+                ChallengeFailed.ONGOING: f"❌ You already have an ongoing challenge with {p2.mention}.",
+                ChallengeFailed.TOO_EARLY: "❌ You can only challenge the same player once per day.",
+                ChallengeFailed.BAD_LINK: "❌ One of you isn't properly linked in the database.",
+            }
+            await interaction.followup.send(
+                msgs.get(
+                    status, "❌ Challenge failed due to unknown eligibility reason."
+                ),
+                ephemeral=True,
+            )
+            return False
+
+        return True
+
+    async def _distribute_challenge(
+        self, interaction, challenger, target, pp, league, challenge_id
     ):
-        """Handles DMs, Waiting, and Result Logic."""
+        """Handles the DM, Public Announcement, and User Feedback."""
 
-        await interaction.followup.send(
-            f"⚔️ {challenger.mention} has challenged {player.mention} for **{pp}PP**!"
-        )
+        view = UnifiedChallengeView(bot=self.bot, challenge_id=challenge_id)
 
-        view = ChallengeView(target_user=player)
         try:
-            await player.send(
-                f"⚔️ **Challenge Request**\n{challenger.display_name} challenged you for **{pp}PP** in **{league}** league.\nDo you accept?",
+            await target.send(
+                f"⚔️ **Challenge Request**\n"
+                f"{challenger.display_name} challenged you for **{pp}PP** in **{league}** league.\n"
+                f"Do you accept?",
                 view=view,
             )
         except discord.Forbidden:
+            await self.db_handler.revoke_challenge(challenge_id)
             await interaction.followup.send(
-                f"❌ Challenge failed: {player.mention} has DMs disabled."
+                f"❌ Challenge failed: {target.mention} has DMs disabled.",
+                ephemeral=True,
             )
-            await self.db_handler.delete_challenge(challenge_id)
             return
 
-        results_channel = self.bot.get_channel(ENV.RIVAL_RESULTS_ID)
-        public_msg = None
-        if results_channel:
-            try:
-                public_msg = await results_channel.send(
-                    f"🔸 {challenger.mention} vs {player.mention} | **{pp}PP** | {league} | ⏳ Pending..."
-                )
-                await self.db_handler.set_challenge_msg_id(challenge_id, public_msg.id)
-            except Exception as e:
-                self.bot.logger.warning(f"Could not post to results channel: {e}")
+        public_msg = await self._announce_publicly(challenger, target, pp, league)
 
-        await view.wait()
+        if public_msg:
+            await self.db_handler.store_msg_id(challenge_id, public_msg.id)
 
-        if view.response is None:
-            await self._finalize_challenge(
-                challenge_id,
-                ChallengeStatus.CANCELLED,
-                public_msg,
-                f"{challenger.mention} vs {player.mention} | ⏱️ Revoked (Timeout)",
-            )
-            await interaction.followup.send(
-                f"⏱️ Challenge to {player.display_name} timed out."
-            )
+        await interaction.followup.send(
+            f"⚔️ {challenger.mention} has challenged {target.mention} for **{pp}PP**!"
+        )
 
-        elif view.response is True:
-            await self._finalize_challenge(
-                challenge_id,
-                ChallengeStatus.ACCEPTED,
-                public_msg,
-                f"{challenger.mention} vs {player.mention} | **{pp}PP** | ⚔️ **UNFINISHED**",
-            )
-            await interaction.followup.send(
-                f"✅ {player.mention} accepted the challenge!"
-            )
+    async def _announce_publicly(self, p1, p2, pp, league) -> Optional[discord.Message]:
+        """Sends the pending message to the public results channel."""
+        guild = self.bot.guild
+        if not guild:
+            return None
 
-        else:
-            await self._finalize_challenge(
-                challenge_id,
-                ChallengeStatus.DECLINED,
-                public_msg,
-                f"{challenger.mention} vs {player.mention} | ❌ Declined",
+        channel = guild.get_channel(ENV.RIVAL_RESULTS_ID)
+        if not channel:
+            await self.log_handler.report_error(
+                "Challenge Announcement",
+                Exception("Channel Missing"),
+                f"ID: {ENV.RIVAL_RESULTS_ID}",
             )
-            await interaction.followup.send(
-                f"🚫 {player.display_name} declined the challenge."
-            )
+            return None
 
-    async def _finalize_challenge(self, c_id, status, msg, content):
-        """Updates DB and edits the public message."""
         try:
-            if status == ChallengeStatus.CANCELLED:
-                await self.db_handler.delete_challenge(c_id)
-            else:
-                await self.db_handler.update_challenge_status(c_id, status)
-
-            if msg:
-                await msg.edit(content=content)
+            return await channel.send(
+                f"🔸 {p1.mention} vs {p2.mention} | **{pp}PP** | {league} | ⏳ Pending..."
+            )
         except Exception as e:
-            self.bot.logger.error(f"Failed to finalize challenge {c_id}: {e}")
+            await self.log_handler.report_error("Challenge Announcement", e)
+            return None
 
 
 async def setup(bot: OsuArena):
