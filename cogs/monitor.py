@@ -40,12 +40,24 @@ class Monitor(commands.Cog, name="monitor"):
             await self.monitor_top_plays()
             await self.monitor_rivals()
         except Exception as e:
-            self.logger.error(f"CRITICAL: Monitor Loop crashed: {e}")
             await self.log_handler.report_error("Monitor.monitor_database_loop", e)
 
     @monitor_database.before_loop
     async def before_monitor_database(self):
         await self.bot.wait_until_ready()
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        role = discord.utils.get(member.guild.roles, name="Inactive")
+        if role:
+            await member.add_roles(role)
+        else:
+            error = Exception("Unable to handle role.")
+            self.log_handler.report_error(
+                "Monitor.on_member_join()",
+                error,
+                f"Error handling <@{member.id}> Inactive role",
+            )
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):

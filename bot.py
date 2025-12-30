@@ -1,16 +1,11 @@
 import os
-import sys
 
 import discord
 from discord.ext import commands
 from load_env import ENV
-from osu import AsynchronousClient
 
 
-from supabase._async.client import AsyncClient
-import asyncio
-
-from utils_v2 import LogHandler, DatabaseHandler, UnifiedChallengeView
+from utils_v2 import LogHandler, DatabaseHandler, UnifiedChallengeView, InitExterns
 
 
 intents = discord.Intents.default()
@@ -25,28 +20,26 @@ class OsuArena(commands.Bot):
             intents=intents,
             help_command=None,
         )
-        self.log_handler = LogHandler(self)
+        self.log_handler = LogHandler()
         self.logger = self.log_handler.logger
 
         self.db_handler = None
         self.supabase_client = None
         self.osu_client = None
+        self.osu_auth = None
 
     async def setup_hook(self) -> None:
         self.logger.info(f"Logged in as {self.user.name}")
         self.add_view(UnifiedChallengeView(bot=self))
 
-        self.supabase_client = await self.setup_supabase_client()
-        self.osu_client = await self.setup_osu_client()
-
-        self.db_handler = DatabaseHandler(self, self.supabase_client)
+        await self.init_externs()
+        self.db_handler = DatabaseHandler(self.log_handler, self.supabase_client)
 
         await self.load_cogs()
 
-        self.tree.error(self.log_handler.on_command_error)
+        self.tree.on_error = self.on_tree_error
 
     async def on_ready(self) -> None:
-        await self.log_handler.initiate_channel()
         self.logger.info("-------------------")
         await self.log_handler.report_info("Bot is Ready and Online!")
         try:
@@ -80,74 +73,34 @@ class OsuArena(commands.Bot):
                     )
         self.logger.info("-------------------")
 
-    async def setup_supabase_client(self) -> AsyncClient:
-        SUPABASE_URL = ENV.SUPABASE_URL
-        SUPABASE_KEY = ENV.SUPABASE_KEY
-        max_tries = 3
-
-        self.logger.info("-------------------")
-        self.logger.info("Creating Supabase Client....")
-
-        for i in range(max_tries):
-            try:
-                supabase_client = await AsyncClient.create(
-                    supabase_key=SUPABASE_KEY, supabase_url=SUPABASE_URL
-                )
-                self.logger.info("Supabase client created successfully")
-                self.logger.info("-------------------")
-                return supabase_client
-            except Exception as e:
-                if i == max_tries - 1:
-                    self.logger.critical(
-                        f"CRITICAL FAILURE: Supabase Client creation failed after {max_tries} attempts.\n"
-                        f"Error: {e}\n"
-                        "Shutting down..."
-                    )
-                    sys.exit(1)
-                else:
-                    self.logger.error(
-                        f"Supabase Client creation failed (Attempt {i + 1}/{max_tries}).\n"
-                        f"Error: {e}\n"
-                        "Retrying in 5 seconds..."
-                    )
-                    await asyncio.sleep(5)
-
-    async def setup_osu_client(self) -> AsynchronousClient:
-        OSU_CLIENT_ID = int(ENV.OSU_CLIENT_ID)
-        OSU_CLIENT_SECRET = ENV.OSU_CLIENT_SECRET
-        REDIRECT_URL = ENV.REDIRECT_URL
-        max_tries = 3
-
-        self.logger.info("-------------------")
-        self.logger.info("Creating Osu Client....")
-
-        for i in range(max_tries):
-            try:
-                osu_client = AsynchronousClient.from_credentials(
-                    OSU_CLIENT_ID, OSU_CLIENT_SECRET, REDIRECT_URL
-                )
-                self.logger.info("Osu client created successfully")
-                self.logger.info("-------------------")
-                return osu_client
-            except Exception as e:
-                if i == max_tries - 1:
-                    self.logger.critical(
-                        f"CRITICAL FAILURE: Osu Client creation failed after {max_tries} attempts.\n"
-                        f"Error: {e}\n"
-                        "Shutting down..."
-                    )
-                    sys.exit(1)
-                else:
-                    self.logger.error(
-                        f"Osu Client creation failed (Attempt {i + 1}/{max_tries}).\n"
-                        f"Error: {e}\n"
-                        "Retrying in 5 seconds..."
-                    )
-                    await asyncio.sleep(5)
+    async def init_externs(self) -> None:
+        init_obj = InitExterns(self.log_handler)
+        self.osu_auth = await init_obj.setup_osu_auth(
+            ENV.AUTH_ID, ENV.AUTH_TOKEN, ENV.REDIRECT_URL
+        )
+        self.supabase_client = await init_obj.setup_supabase_client(
+            ENV.SUPABASE_URL, ENV.SUPABASE_KEY
+        )
+        self.osu_client = await init_obj.setup_osu_client(
+            ENV.OSU_CLIENT_ID, ENV.OSU_CLIENT_SECRET, ENV.REDIRECT_URL
+        )
 
     @property
     def guild(self) -> discord.Guild | None:
         return self.get_guild(ENV.OSU_ARENA)
+
+    async def on_tree_error(
+        self, interaction: discord.Interaction, error: commands.CommandError
+    ):
+        error = getattr(error, "original", error)
+        location = f"Slash Command: /{interaction.command.name if interaction.command else 'Unknown'}"
+        await self.log_handler.report_error(location, error)
+
+        msg = "⚠️ An unexpected error occurred."
+        if interaction.response.is_done():
+            await interaction.followup.send(msg, ephemeral=True)
+        else:
+            await interaction.response.send_message(msg, ephemeral=True)
 
 
 if __name__ == "__main__":

@@ -27,3 +27,5 @@ class ENV:
     REDIRECT_URL = os.getenv("REDIRECT_URL")
     REQ_ROLE = os.getenv("REQ_ROLE")
     REQ_ROLE_POINTS = os.getenv("REQ_ROLE_POINTS")
+    LOGS_WEBHOOK = os.getenv("LOGS_WEBHOOK")
+    CLIENT2_REDIRECT_URL = os.getenv("CLIENT2_REDIRECT_URL")

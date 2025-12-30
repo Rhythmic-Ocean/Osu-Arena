@@ -39,6 +39,8 @@ from .renderer import BaseRenderer, Renderer
 
 from .reset_utils import ResetConfirmView
 
+from .init_externs import InitExterns
+
 __all__ = [
     # Table Namespaces
     "TableAll",
@@ -82,4 +84,6 @@ __all__ = [
     # Viewer
     "UnifiedChallengeView",
     "ResetConfirmView",
+    # Init
+    "InitExterns",
 ]

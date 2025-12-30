@@ -3,20 +3,19 @@ import datetime
 import io
 import traceback
 import discord
-from discord.ext import commands
 from load_env import ENV
+import aiohttp
 
 
 class LogHandler:
     class LoggingFormatter(logging.Formatter):
-        # Colors
         black = "\x1b[30m"
         red = "\x1b[31m"
         green = "\x1b[32m"
         yellow = "\x1b[33m"
         blue = "\x1b[34m"
         gray = "\x1b[38m"
-        # Styles
+
         reset = "\x1b[0m"
         bold = "\x1b[1m"
 
@@ -38,27 +37,11 @@ class LogHandler:
             formatter = logging.Formatter(format, "%Y-%m-%d %H:%M:%S", style="{")
             return formatter.format(record)
 
-    def __init__(
-        self, bot: commands.Bot = None, logger_name: str = "discord_bot"
-    ) -> None:
+    def __init__(self, logger_name: str = "discord_bot") -> None:
         self.logger = logging.getLogger(logger_name)
-        self.bot = bot
         self.logger.setLevel(logging.INFO)
         self._setup_handlers()
-        self.guild = None
-        self.channel = None
-
-    async def initiate_channel(self) -> None:
-        if self.channel:
-            return
-        await self.bot.wait_until_ready()
-        self.guild = self.bot.get_guild(int(ENV.OSU_ARENA))
-        if not self.guild:
-            self.logger.critical("Critical: Guild Not Found!!")
-        else:
-            self.channel = self.guild.get_channel(int(ENV.BOT_LOGS))
-        if not self.channel:
-            self.logger.critical("Critical: Bot_Logs Channel Not Found!!")
+        self.webhook_url = ENV.LOGS_WEBHOOK
 
     def _setup_handlers(self) -> None:
         if self.logger.hasHandlers():
@@ -86,59 +69,64 @@ class LogHandler:
         if msg:
             log_msg += f"\nNote: {msg}"
         self.logger.error(f"{log_msg}\n{trace}")
-        if not self.channel:
-            return
-        embed = discord.Embed(
-            title="⚠️ System Error",
-            color=discord.Color.red(),
-            timestamp=datetime.datetime.now(datetime.UTC),
-        )
-        embed.add_field(name="Location", value=f"`{location}`", inline=False)
-        embed.add_field(
-            name="Message", value=f"```py\n{str(error)[:1000]}```", inline=False
-        )
 
-        if len(trace) > 1000:
-            with io.BytesIO(trace.encode()) as f:
-                await self.channel.send(
-                    embed=embed, file=discord.File(f, filename="traceback.txt")
+        if not self.webhook_url:
+            self.logger.critical(
+                "CRITICAL : WEBHOOOK URL NOT FOUND! CANNOT REPORT ERRORS TO SERVER!"
+            )
+            return
+
+        async with aiohttp.ClientSession() as session:
+            webhook = discord.Webhook.from_url(self.webhook_url, session=session)
+            embed = discord.Embed(
+                title="⚠️ System Error",
+                color=discord.Color.red(),
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+            )
+            embed.add_field(name="Location", value=f"`{location}`", inline=False)
+            embed.add_field(
+                name="Message", value=f"```py\n{str(error)[:1000]}```", inline=False
+            )
+
+            if len(trace) > 1000:
+                with io.BytesIO(trace.encode()) as f:
+                    await webhook.send(
+                        embed=embed,
+                        file=discord.File(f, filename="traceback.txt"),
+                        username="OsuArena Error",
+                    )
+            else:
+                embed.add_field(
+                    name="Traceback", value=f"```py\n{trace}```", inline=False
                 )
-        else:
-            embed.add_field(name="Traceback", value=f"```py\n{trace}```", inline=False)
-            await self.channel.send(embed=embed)
+                await webhook.send(embed=embed, username="OsuArena Error")
 
     async def report_info(self, message: str, title: str = "ℹ️ System Info"):
-        self.logger.info(f"{title}: {message}")
-
-        if not self.channel:
-            return
-
-        embed = discord.Embed(
-            title=title,
-            color=discord.Color.blue(),  # Blue for info, Green for success
-            timestamp=datetime.datetime.now(datetime.UTC),
-        )
-
-        if len(message) > 4000:
-            embed.description = "Message too long to display. See attached file."
-            with io.BytesIO(message.encode()) as f:
-                await self.channel.send(
-                    embed=embed, file=discord.File(f, filename="info_log.txt")
-                )
+        if hasattr(self, "logger"):
+            self.logger.info(f"{title}: {message}")
         else:
-            embed.description = message
-            await self.channel.send(embed=embed)
+            print(f"{title}: {message}")
 
-    async def on_command_error(
-        self, ctx: commands.Context, error: commands.CommandError
-    ):
-        if hasattr(ctx.command, "on_error"):
+        if not self.webhook_url:
             return
-        error = getattr(error, "original", error)
-        location = (
-            f"Command: {ctx.command.qualified_name if ctx.command else 'Unknown'}"
-        )
-        await self.report_error(location, error)
-        await ctx.send(
-            "⚠️ An unexpected error occurred. The developers have been notified."
-        )
+
+        async with aiohttp.ClientSession() as session:
+            webhook = discord.Webhook.from_url(self.webhook_url, session=session)
+
+            embed = discord.Embed(
+                title=title,
+                color=discord.Color.blue(),
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+            )
+
+            if len(message) > 4000:
+                embed.description = "Message too long to display. See attached file."
+                with io.BytesIO(message.encode()) as f:
+                    await webhook.send(
+                        embed=embed,
+                        file=discord.File(f, filename="info_log.txt"),
+                        username="OsuArena Info",
+                    )
+            else:
+                embed.description = message
+                await webhook.send(embed=embed, username="OsuArena Info")

@@ -1,11 +1,12 @@
 from __future__ import annotations
 import datetime
-from typing import Any, TYPE_CHECKING
+from typing import Any
 import discord
 from supabase import AsyncClient
 
 from utils_v2.enums.status import FuncStatus
 from utils_v2.enums.tables import TablesLeagues
+from utils_v2.log_handler import LogHandler
 
 from .enums import (
     HistoricalPointsColumn,
@@ -23,14 +24,10 @@ from .enums import (
     ChallengeUserColumn,
 )
 
-if TYPE_CHECKING:
-    from bot import OsuArena
-
 
 class DatabaseHandler:
-    def __init__(self, bot: OsuArena = None, supabase_client: AsyncClient = None):
-        self.bot = bot
-        self.log_handler = self.bot.log_handler
+    def __init__(self, log_handler: LogHandler, supabase_client: AsyncClient = None):
+        self.log_handler = log_handler
         self.supabase_client = supabase_client
 
     async def get_discord_id(
@@ -968,3 +965,23 @@ class DatabaseHandler:
                 f"Failed to retrive player <@{discord_id}>",
             )
             return FuncStatus.ERROR
+
+    async def remove_player(self, discord_id: int) -> bool:
+        try:
+            response = await (
+                self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                .delete()
+                .eq(DiscordOsuColumn.DISCORD_ID, discord_id)
+                .execute()
+            )
+            # data was not deleted, so no response in response.data
+            if not response.data:
+                return False
+            return True
+        except Exception as error:
+            self.log_handler.report_error(
+                "DatabaseHandler.remove_player()",
+                error,
+                f"Error occured for <@{discord_id}>",
+            )
+            return False
