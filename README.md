@@ -19,7 +19,8 @@
   - Most database modification actions are now performed through Postgres RPC, with a few exceptions.
   - New GitHub workflow for nightly backups (in a private repo).
   - Extended error handling with direct error reporting to the server via WebHook (see more at `utils_v2/error_handling.py`).
-  - `Web.py` now follows Flask's View model to match the bot's class-based architecture.
+  - `Web.py` now follows View model to match the bot's class-based architecture. [Learn More](https://flask.palletsprojects.com/en/stable/views/)
+  - /link generated URLs are only valid for 5 mins now.
 
 ---
 
@@ -241,13 +242,13 @@ It is recommended to use a virtual environment to manage dependencies.
 python3 -m venv venv
 ```
 
-2. Activate the environment (Linux/macOS)
+1. Activate the environment (Linux/macOS)
 
 ```bash
 source venv/bin/activate
 ```
 
-3. Install dependencies
+1. Install dependencies
 
 ```bash
 pip install -r requirements.txt

@@ -103,6 +103,14 @@ class OsuArena(commands.Bot):
         else:
             await interaction.response.send_message(msg, ephemeral=True)
 
+    async def close(self) -> None:
+        if self.log_handler:
+            try:
+                await self.log_handler.report_info("Bot is closing")
+            except Exception as e:
+                self.logger.error(f"Failed to report shutdown: {e}")
+        await super().close()
+
 
 if __name__ == "__main__":
     bot = OsuArena()
