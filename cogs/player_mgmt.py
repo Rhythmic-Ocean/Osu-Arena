@@ -1,7 +1,7 @@
 from __future__ import annotations
 import discord
 from discord.ext import commands
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from discord import app_commands
 import secrets
 import time
@@ -9,6 +9,8 @@ import time
 from itsdangerous import URLSafeSerializer
 
 from load_env import ENV
+from utils_v2.enums.status import FuncStatus
+from utils_v2.enums.tables_internals import RivalsColumn
 
 if TYPE_CHECKING:
     from bot import OsuArena
@@ -131,6 +133,9 @@ class PlayerManagement(commands.Cog):
     async def delete(self, interaction: discord.Interaction, player: discord.Member):
         await interaction.response.defer()
 
+        # to use  later to revoke rivals, fails silently if no such user exists
+        osu_username = await self.db_handler.get_username(discord_id=player.id)
+
         success = await self.db_handler.remove_player(player.id)
 
         if not success:
@@ -142,6 +147,9 @@ class PlayerManagement(commands.Cog):
                 f"Attempted to delete non-existent user <@{player.id}>"
             )
             return
+        # NOTE: This is only possible because Rivals tables is independent
+        # of other tables. If it ever gets foreign keyed, then this will need
+        # to be changed
 
         await interaction.followup.send(
             f"✅ **Deleted**: <@{player.id}> has been wiped from the database."
@@ -153,6 +161,64 @@ class PlayerManagement(commands.Cog):
             await interaction.followup.send(
                 "⚠️ Database erasure successful, but failed to reset roles/nickname."
             )
+
+        challenges = await self.db_handler.get_active_challenges(
+            player.id, osu_username
+        )
+        if challenges == FuncStatus.ERROR:
+            await interaction.followup.send(
+                f"⚠️ Failed retriving any existing challenges for <@{player.id}>. Please delete any of their existing challenges manually."
+            )
+            return
+
+        if not len(challenges):
+            await interaction.followup.send(
+                f"⚠️ No existing challenges for <@{player.id}>."
+            )
+            return
+
+        total_revoked_challenges = 0
+        for challenge in challenges:
+            if await self.revoke_challenge(interaction, challenge):
+                total_revoked_challenges += 1
+        await interaction.followup.send(
+            f"⚠️{total_revoked_challenges}/{len(challenges)} challenges revoked."
+        )
+
+    async def revoke_challenge(
+        self, interaction: discord.Interaction, challenge: dict[str, Any]
+    ):
+        challenger = challenge[RivalsColumn.CHALLENGER]
+        challenged = challenge[RivalsColumn.CHALLENGED]
+        challenge_id = challenge[RivalsColumn.CHALLENGE_ID]
+
+        revoke_success = await self.db_handler.revoke_challenge(challenge_id)
+        if not revoke_success:
+            error = Exception(
+                f"Failed to revoke challenge, challenge_id : {challenge_id}. {challenger} vs {challenged}"
+            )
+            await self.log_handler.report_error(
+                "PlayerManagement.revoke_challenge()",
+                error,
+            )
+            return False
+
+        msg_id = await self.db_handler.get_msg_id(challenge_id)
+        guild = interaction.guild
+        channel = guild.get_channel(ENV.RIVAL_RESULTS_ID)
+
+        if not channel:
+            return True
+        new_content = f"{challenger} vs {challenged} | Revoked"
+        msg = None
+        if msg_id:
+            try:
+                msg = await channel.fetch_message(msg_id)
+                if msg:
+                    await msg.edit(content=new_content)
+            except discord.NotFound:
+                await channel.send(content=new_content)
+        return True
 
     async def _role_nick_deletion(
         self, interaction: discord.Interaction, member: discord.Member

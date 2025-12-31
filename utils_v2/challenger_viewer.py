@@ -59,7 +59,8 @@ class UnifiedChallengeView(discord.ui.View):
 
         if not result:
             return await interaction.response.edit_message(
-                content="❌ Challenge not found or expired.", view=None
+                content="❌ Invalid challenge or one the challengers left the server..",
+                view=None,
             )
 
         challenger_id, challenged_id, for_pp = result

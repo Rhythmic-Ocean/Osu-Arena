@@ -13,6 +13,7 @@ from utils_v2 import (
     Renderer,
 )
 from load_env import ENV
+from utils_v2.enums.status import FuncStatus
 
 if TYPE_CHECKING:
     from bot import OsuArena
@@ -65,8 +66,10 @@ class Monitor(commands.Cog, name="monitor"):
         user_name = member.name
 
         await self.log_handler.report_info(
-            f"User left: {user_name} ({discord_id}). Processing deletion..."
+            f"User left: {user_name} (<@{discord_id}>). Processing deletion..."
         )
+        # to use  later to revoke rivals, fails silently if no such user exists
+        osu_username = await self.db_handler.get_username(discord_id)
 
         try:
             response = await (
@@ -97,6 +100,32 @@ class Monitor(commands.Cog, name="monitor"):
             else:
                 await self.log_handler.report_info(
                     f"User {user_name} left, but was not in the database."
+                )
+            if osu_username:
+                challenges = await self.db_handler.get_active_challenges(
+                    discord_id, osu_username
+                )
+                if challenges == FuncStatus.ERROR:
+                    error = Exception(f"Error when {user_name} left.")
+                    await self.log_handler.report_error(
+                        "Monitor.on_member_remove()",
+                        error,
+                        f"⚠️ Failed retriving any existing challenges for <@{discord_id}>. Please delete any of their existing challenges manually.",
+                    )
+                    return
+
+                if not len(challenges):
+                    await self.log_handler.report_info(
+                        f"⚠️ No existing challenges for {user_name} <@{discord_id}>."
+                    )
+                    return
+
+                total_revoked_challenges = 0
+                for challenge in challenges:
+                    if await self.revoke_challenge(challenge):
+                        total_revoked_challenges += 1
+                await self.log_handler.report_info(
+                    f"⚠️{total_revoked_challenges}/{len(challenges)} challenges revoked."
                 )
 
         except Exception as e:
@@ -413,6 +442,39 @@ class Monitor(commands.Cog, name="monitor"):
             await self.log_handler.report_error(
                 "Monitor.point_distribution_announcement", error
             )
+
+    async def revoke_challenge(self, challenge: dict[str, Any]):
+        challenger = challenge[RivalsColumn.CHALLENGER]
+        challenged = challenge[RivalsColumn.CHALLENGED]
+        challenge_id = challenge[RivalsColumn.CHALLENGE_ID]
+
+        revoke_success = await self.db_handler.revoke_challenge(challenge_id)
+        if not revoke_success:
+            error = Exception(
+                f"Failed to revoke challenge, challenge_id : {challenge_id}. {challenger} vs {challenged}"
+            )
+            await self.log_handler.report_error(
+                "PlayerManagement.revoke_challenge()",
+                error,
+            )
+            return False
+
+        msg_id = await self.db_handler.get_msg_id(challenge_id)
+        guild = self.bot.guild
+        channel = guild.get_channel(ENV.RIVAL_RESULTS_ID)
+
+        if not channel:
+            return True
+        new_content = f"{challenger} vs {challenged} | Revoked"
+        msg = None
+        if msg_id:
+            try:
+                msg = await channel.fetch_message(msg_id)
+                if msg:
+                    await msg.edit(content=new_content)
+            except discord.NotFound:
+                await channel.send(content=new_content)
+        return True
 
 
 async def setup(bot: OsuArena):

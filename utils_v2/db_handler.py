@@ -981,6 +981,7 @@ class DatabaseHandler:
             # data was not deleted, so no response in response.data
             if not response.data:
                 raise Exception(f"Failed to find <@{discord_id}>")
+
             return True
         except Exception as error:
             await self.log_handler.report_error(
@@ -1069,3 +1070,34 @@ class DatabaseHandler:
                 error,
                 f"Error checking for <@{discord_id}>.",
             )
+
+    async def get_active_challenges(
+        self, discord_id: int, osu_username: str
+    ) -> list[dict[str, Any]] | FuncStatus:
+        # note: postgres syntax require double quotes around strings with spaces and these one can have spaces
+        osu_username = f'"{osu_username}"'
+        try:
+            response = (
+                await self.supabase_client.table(TablesRivals.RIVALS)
+                .select(
+                    f"{RivalsColumn.CHALLENGE_ID}, {RivalsColumn.CHALLENGED}, {RivalsColumn.CHALLENGER}"
+                )
+                .or_(
+                    f"{RivalsColumn.CHALLENGED}.eq.{osu_username}, {RivalsColumn.CHALLENGER}.eq.{osu_username}"
+                )
+                .or_(
+                    f"{RivalsColumn.CHALLENGE_STATUS}.eq.{ChallengeStatus.PENDING}, {RivalsColumn.CHALLENGE_STATUS}.eq.{ChallengeStatus.UNFINISHED}"
+                )
+                .execute()
+            )
+            if response and response.data:
+                data = [item for item in response.data]
+                return data
+            return []
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler.get_active_challenge()",
+                error,
+                f"Error retriving challenge for <@{discord_id}>",
+            )
+            return FuncStatus.ERROR
