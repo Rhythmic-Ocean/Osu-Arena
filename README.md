@@ -303,7 +303,7 @@ LOGS_WEBHOOK=       # Webhook URL for logging errors and info (avoids channel ID
 
 4. Recommended this [Youtube Tutorial](https://www.youtube.com/watch?v=tsw7LzIM5_o) for how you can use the given .sql files to create the required database layout
 
-# NOTE: `supabase_schema.sql` might be outdated as I'm trying to migrate all my modification type queries to be postgres RPC But I can provide you with the latest one if you ask me
+**NOTE**: `supabase_schema.sql` might be outdated as I'm trying to migrate all my modification type queries to be postgres RPC But I can provide you with the latest one if you ask me
 
 ### 5. Running the Bot
 
