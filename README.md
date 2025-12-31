@@ -241,13 +241,13 @@ It is recommended to use a virtual environment to manage dependencies.
 python3 -m venv venv
 ```
 
-1. Activate the environment (Linux/macOS)
+2. Activate the environment (Linux/macOS)
 
 ```bash
 source venv/bin/activate
 ```
 
-1. Install dependencies
+3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
