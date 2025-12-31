@@ -53,19 +53,21 @@ class SeasonManagement(commands.Cog):
 
         except Exception as e:
             await self.log_handler.report_error("Season Restart Critical Failure", e)
-            await interaction.followup.send(
-                "❌ **CRITICAL ERROR** during restart sequence. Check logs."
+            await interaction.edit_original_response(
+                content="❌ **CRITICAL ERROR** during restart sequence. Check logs."
             )
 
     async def _get_confirmation(self, interaction: discord.Interaction) -> bool:
-        await interaction.response.defer()
+        await interaction.response.defer(ephemeral=False)
 
         view = ResetConfirmView(interaction)
-        await interaction.followup.send(
-            "⚠️ **WARNING** ⚠️\n"
-            "You are about to **END THE CURRENT SEASON**.\n"
-            "This will archive data, reset points, and move players.\n\n"
-            "Are you sure you want to proceed?",
+        await interaction.edit_original_response(
+            content=(
+                "⚠️ **WARNING** ⚠️\n"
+                "You are about to **END THE CURRENT SEASON**.\n"
+                "This will archive data, reset points, and move players.\n\n"
+                "Are you sure you want to proceed?"
+            ),
             view=view,
         )
 
@@ -73,7 +75,7 @@ class SeasonManagement(commands.Cog):
 
         if view.value is None:
             await interaction.edit_original_response(
-                "❌ **Timed out.** Operation cancelled."
+                content="❌ **Timed out.** Operation cancelled.", view=None
             )
             return False
         elif not view.value:
@@ -177,7 +179,7 @@ class SeasonManagement(commands.Cog):
                 await msg.edit(content=f"❌ Error initializing pp for {league}")
                 return False
             await msg.edit(
-                content=f"✅ **{league} League**: Backed up & Season Reinitiated."
+                content=f"✅ **{league.capitalize()} League**: Backed up & Season Reinitiated."
             )
 
         return True
@@ -196,8 +198,12 @@ class SeasonManagement(commands.Cog):
                 "🏆 Good luck to all players in the new season!"
             )
         except Exception as e:
-            await self.log_handler.report_error("League Migration", e)
-            await interaction.followup.send(f"❌ Critical Error updating leagues: {e}")
+            await self.log_handler.report_error(
+                "SeasonManagement._step_migrate_roles()", e
+            )
+            await interaction.followup.send(
+                "❌ Critical Error updating leagues. Please refer to log."
+            )
 
     async def _process_role_changes(
         self, interaction: discord.Interaction, players_data: list[dict[str, Any]]

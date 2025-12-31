@@ -41,6 +41,15 @@ class Archives(commands.Cog):
                 "⚠️ **System Error:** An unexpected error occurred while processing the archive."
             )
 
+    @archived.autocomplete("league")
+    async def show_autocomplete(self, interaction: discord.Interaction, current: str):
+        choices = [t.value for t in ArchivedTable]
+        return [
+            app_commands.Choice(name=choice.capitalize(), value=choice)
+            for choice in choices
+            if current.lower() in choice.lower()
+        ][:25]
+
     async def _validate_args(
         self, interaction: discord.Interaction, season: int, league_name: str
     ) -> bool:
@@ -54,7 +63,7 @@ class Archives(commands.Cog):
             )
             return False
 
-        if league_name == ArchivedTable.RIVALS.value:
+        if league_name == ArchivedTable.RIVALS:
             if season != 0:
                 await interaction.followup.send(
                     "❌ **Incorrect Season:** Rivals archives do not use season numbers.\n"
@@ -80,21 +89,21 @@ class Archives(commands.Cog):
             )
             return False
 
-        if league_name == ArchivedTable.NOVICE.value and season == 1:
+        if league_name == ArchivedTable.NOVICE and season == 1:
             await interaction.followup.send(
                 "❌ **Unavailable:** The Novice League archive starts from **Season 2**.",
                 ephemeral=True,
             )
             return False
 
-        if league_name == ArchivedTable.RANKER.value and season != 1:
+        if league_name == ArchivedTable.RANKER and season != 1:
             await interaction.followup.send(
                 "❌ **Unavailable:** Ranker League is deprecated and only exists for **Season 1**.",
                 ephemeral=True,
             )
             return False
 
-        if league_name == ArchivedTable.S_POINTS.value and season < 3:
+        if league_name == ArchivedTable.S_POINTS and season < 3:
             await interaction.followup.send(
                 "❌ **Unavailable:** Seasonal Points are only archived starting from **Season 3**.",
                 ephemeral=True,
@@ -104,14 +113,14 @@ class Archives(commands.Cog):
         return True
 
     async def _fetch_archive_data(self, league: str, season: int):
-        if league == ArchivedTable.RIVALS.value:
+        if league == ArchivedTable.RIVALS:
             data = await self.db_handler.get_rivals_table(
                 status=ChallengeStatus.FINISHED
             )
             title = "⚔️ Rivals - Finished Challenges"
             return (*data, title) if data else ([], [], title)
 
-        if league == ArchivedTable.S_POINTS.value:
+        if league == ArchivedTable.S_POINTS:
             data = await self.db_handler.get_archived_points(season=season)
             title = f"🏆 Seasonal Points - Season {season}"
             return (*data, title) if data else ([], [], title)

@@ -24,7 +24,7 @@ class ResetConfirmView(discord.ui.View):
         self.value = True
         await interaction.response.defer()
         await interaction.edit_original_response(
-            "✅ Confirmation received. Starting restart sequence..."
+            content="✅ Confirmation received. Starting restart sequence...", view=None
         )
         self.stop()
 
@@ -32,5 +32,7 @@ class ResetConfirmView(discord.ui.View):
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = False
         await interaction.response.defer()
-        await interaction.edit_original_response("❌ **Operation cancelled** by user..")
+        await interaction.edit_original_response(
+            content="❌ **Operation cancelled** by user..", view=None
+        )
         self.stop()

@@ -27,3 +27,5 @@ class FuncStatus(Enum):
     ERROR = auto()
     GOOD = auto()
     EMPTY = auto()
+    BAD_REQ = auto()
+    TOO_LATE = auto()

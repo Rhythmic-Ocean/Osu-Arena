@@ -2,9 +2,10 @@
 *.env
 *.log
 
-# Ignore Python Cache
 __pycache__/
+test/
 *.pyc
 
-# Ignore Editor Settings
 .vscode/.pyc
+
+.json

@@ -53,7 +53,7 @@ class InitExterns:
                     await asyncio.sleep(5)
 
     async def setup_osu_client(
-        self, osu_client_id: int, osu_client_sec: str, redirect_url: str
+        self, osu_client_id: int, osu_client_sec: str
     ) -> AsynchronousClient:
         max_tries = 3
         self.logger.info("-------------------")
@@ -62,7 +62,7 @@ class InitExterns:
         for i in range(max_tries):
             try:
                 client = AsynchronousClient.from_credentials(
-                    osu_client_id, osu_client_sec, redirect_url
+                    osu_client_id, osu_client_sec, None
                 )
                 self.osu_client = client
 

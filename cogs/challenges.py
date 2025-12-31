@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 
 import discord
 from discord import app_commands
@@ -11,6 +12,8 @@ from utils_v2 import (
     UnifiedChallengeView,
     TablesLeagues,
 )
+from utils_v2.db_handler import DatabaseHandler
+from utils_v2.log_handler import LogHandler
 
 if TYPE_CHECKING:
     from bot import OsuArena
@@ -23,8 +26,8 @@ MAX_ACTIVE_CHALLENGES = 3
 class Challenge(commands.Cog):
     def __init__(self, bot: OsuArena):
         self.bot = bot
-        self.db_handler = self.bot.db_handler
-        self.log_handler = self.bot.log_handler
+        self.db_handler: DatabaseHandler = self.bot.db_handler
+        self.log_handler: LogHandler = self.bot.log_handler
 
     @app_commands.command(
         name="challenge", description="Challenge a user in your league"
@@ -58,11 +61,28 @@ class Challenge(commands.Cog):
 
         await interaction.response.defer(ephemeral=False)
 
+        exist1, exist2 = await asyncio.gather(
+            self.db_handler.check_if_player_exists(challenger.id),
+            self.db_handler.check_if_player_exists(target.id),
+        )
+
+        if not exist1:
+            await interaction.edit_original_response(
+                content="⚠️ You are not yet logged into the database. Please try doing /link. If you think this is an error, please contact the mods."
+            )
+            return
+
+        if not exist2:
+            await interaction.edit_original_response(
+                content=f"⚠️ <@{target.id}> is not yet logged into the database. Please ask them to try /link. If you think this is an error, please contact the mods."
+            )
+            return
+
+        # only roles check happen here, database check for shared league happen a bit later
         shared_league = self._find_shared_league(challenger, target)
         if not shared_league:
-            await interaction.followup.send(
-                "❌ You and the target must have the same League Role to challenge.",
-                ephemeral=True,
+            await interaction.edit_original_response(
+                content="❌ You and the target must have the same League Role to challenge."
             )
             return
 
@@ -74,7 +94,7 @@ class Challenge(commands.Cog):
 
         try:
             challenge_id = await self.db_handler.log_rivals(
-                challenger.id, target.id, pp, shared_league
+                challenger, target, pp, shared_league
             )
             if challenge_id is None:
                 raise Exception("Database returned None for challenge_id")
@@ -84,15 +104,14 @@ class Challenge(commands.Cog):
             )
 
         except Exception as e:
-            await self.log_handler.report_error("Challenge Command", e)
-            await interaction.followup.send(
-                "❌ Internal database error. Please try again later.", ephemeral=True
+            await self.log_handler.report_error("Challenge.challenge()", e)
+            await interaction.edit_original_response(
+                content="❌ Internal database error. Please try again later."
             )
 
     def _find_shared_league(
         self, user1: discord.Member, user2: discord.Member
     ) -> str | None:
-        """Returns the league name common to both users, or None."""
         valid_leagues = {t.value.lower() for t in TablesLeagues}
 
         def get_leagues(m):
@@ -108,8 +127,6 @@ class Challenge(commands.Cog):
         p2: discord.Member,
         league: str,
     ) -> bool:
-        """Performs all DB checks. Returns True if challenge can proceed, False if error sent."""
-
         c1_count = await self.db_handler.get_active_challenge_count(p1.id)
         c2_count = await self.db_handler.get_active_challenge_count(p2.id)
 
@@ -117,27 +134,25 @@ class Challenge(commands.Cog):
             raise Exception("Failed to fetch challenge counts")
 
         if c1_count >= MAX_ACTIVE_CHALLENGES:
-            await interaction.followup.send(
-                "❌ You already have 3 active/pending challenges.", ephemeral=True
+            await interaction.edit_original_response(
+                content="❌ You already have 3 active/pending challenges."
             )
             return False
         if c2_count >= MAX_ACTIVE_CHALLENGES:
-            await interaction.followup.send(
-                f"❌ {p2.mention} already has 3 active/pending challenges.",
-                ephemeral=True,
+            await interaction.edit_original_response(
+                content=f"❌ {p2.mention} already has 3 active/pending challenges."
             )
             return False
 
-        if not await self.db_handler.validate_user_league(p1.id, league):
-            await interaction.followup.send(
-                "❌ Your database league does not match your role. Contact Admin.",
-                ephemeral=True,
+        # database check for users happen here, the check is done thru discord_osu table, leagues table are not checked
+        if not await self.db_handler.validate_shared_league(p1.id, league):
+            await interaction.edit_original_response(
+                content="❌ Your database league does not match your role. Contact Admin."
             )
             return False
-        if not await self.db_handler.validate_user_league(p2.id, league):
-            await interaction.followup.send(
-                f"❌ {p2.mention}'s database league does not match their role.",
-                ephemeral=True,
+        if not await self.db_handler.validate_shared_league(p2.id, league):
+            await interaction.edit_original_response(
+                content=f"❌ {p2.mention}'s database league does not match their role."
             )
             return False
 
@@ -149,11 +164,10 @@ class Challenge(commands.Cog):
                 ChallengeFailed.TOO_EARLY: "❌ You can only challenge the same player once per day.",
                 ChallengeFailed.BAD_LINK: "❌ One of you isn't properly linked in the database.",
             }
-            await interaction.followup.send(
-                msgs.get(
+            await interaction.edit_original_response(
+                content=msgs.get(
                     status, "❌ Challenge failed due to unknown eligibility reason."
-                ),
-                ephemeral=True,
+                )
             )
             return False
 
@@ -162,8 +176,6 @@ class Challenge(commands.Cog):
     async def _distribute_challenge(
         self, interaction, challenger, target, pp, league, challenge_id
     ):
-        """Handles the DM, Public Announcement, and User Feedback."""
-
         view = UnifiedChallengeView(bot=self.bot, challenge_id=challenge_id)
 
         try:
@@ -175,9 +187,8 @@ class Challenge(commands.Cog):
             )
         except discord.Forbidden:
             await self.db_handler.revoke_challenge(challenge_id)
-            await interaction.followup.send(
-                f"❌ Challenge failed: {target.mention} has DMs disabled.",
-                ephemeral=True,
+            await interaction.edit_original_response(
+                content=f"❌ Challenge failed: {target.mention} has DMs disabled."
             )
             return
 
@@ -186,8 +197,8 @@ class Challenge(commands.Cog):
         if public_msg:
             await self.db_handler.store_msg_id(challenge_id, public_msg.id)
 
-        await interaction.followup.send(
-            f"⚔️ {challenger.mention} has challenged {target.mention} for **{pp}PP**!"
+        await interaction.edit_original_response(
+            content=f"⚔️ {challenger.mention} has challenged {target.mention} for **{pp}PP**!"
         )
 
     async def _announce_publicly(self, p1, p2, pp, league) -> Optional[discord.Message]:
@@ -199,7 +210,7 @@ class Challenge(commands.Cog):
         channel = guild.get_channel(ENV.RIVAL_RESULTS_ID)
         if not channel:
             await self.log_handler.report_error(
-                "Challenge Announcement",
+                "Challenge._announce_publicly()",
                 Exception("Channel Missing"),
                 f"ID: {ENV.RIVAL_RESULTS_ID}",
             )
@@ -210,7 +221,7 @@ class Challenge(commands.Cog):
                 f"🔸 {p1.mention} vs {p2.mention} | **{pp}PP** | {league} | ⏳ Pending..."
             )
         except Exception as e:
-            await self.log_handler.report_error("Challenge Announcement", e)
+            await self.log_handler.report_error("Challenge._announce_publicly()", e)
             return None
 
 

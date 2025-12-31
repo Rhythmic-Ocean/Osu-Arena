@@ -2,18 +2,31 @@
 
 ![Docs Status](https://img.shields.io/badge/Docs-Work%20In%20Progress-yellow)
 
-> [Website](https://rt4d-production.up.railway.app) | [Join the Discord](https://discord.com/invite/GBsNU5hCQy)
+> [Website](https://rt4d-production.up.railway.app) | [Join the Discord](https://discord.gg/rskvV32ZmX)
 
 **osu!Arena** is a custom-built, real-time Discord bot designed for the **osu! community** at osu!Arena. It manages league sessions, rivalries, challenges, player verification, and rank syncing for a competitive community racing to reach 4-digit osu! global rank and beyond.
 
 ---
 
-## Recent (Dec 23 2025)
+## Recent (Dec 30 2025)
 
-- Redoing bot in a seperate 'cleanup' branch
-- Done with bot.py, utils_v2/error_handler.py and enums/. WIP for utils_v2/monitor.py
+- Completed code refactoring and reinitiated all previous functions.
+- New Additions:
+  - Now with persistent views, challenge requests can theoretically last indefinitely.
+  - The bot now uses the Cogs model. [Learn More](https://github.com/kkrypt0nn/Python-Discord-Bot-Template)
+  - The website uses Quart instead of Flask for proper integration with the async Database Manager.
+  - Added several new .html templates to display specific content based on the OAuth error type.
+  - Most database modification actions are now performed through Postgres RPC, with a few exceptions.
+  - New GitHub workflow for nightly backups (in a private repo).
+  - Extended error handling with direct error reporting to the server via WebHook (see more at `utils_v2/error_handling.py`).
+  - `Web.py` now follows Flask's View model to match the bot's class-based architecture.
 
 ---
+
+## TODO
+
+- Refactor the `supabase.py` cronjob (and rename it) to better align with the rest of the project's architecture.
+- Documentation (specifically for `utils_v2/db_handler.py`).
 
 ---
 
@@ -121,52 +134,50 @@ Effects both seasonal and universal points
 
 ## Project Structure
 
-> ⚠ **Note:** Documentation for `utils/` and `auth.py` is complete. Other modules are currently being documented.
-> ⚠ **Disclaimer:** This was my first experience with working on something so big with an OOP language so yeah, I
-
-                   have used a lott  of functions in  places where classes would do a  better job. I'm working on
-                   fixing that too!
-
-```bash
-├── auth.py #The entry point for the bot
-├── commands #All commands stored here
+```
+├── bot.py
+├── cogs
 │   ├── archived.py
-│   ├── challenge.py
-│   ├── help.py
-│   ├── __init__.py
-│   ├── link.py
-│   ├── points.py
-│   ├── revoke_challenge.py
-│   ├── session_restart.py
-│   ├── show.py
-│   ├── strip.py #this was a one-time command, deprecated for now
-│   └── update.py #not a seperate command, runs in sync with session_restart
-├── core_web.py #utils for website and linking
-├── README.md
-├── requirements.txt
+│   ├── challenges.py
+│   ├── monitor.py
+│   ├── player_mgmt.py
+│   ├── points.py
+│   ├── revoke.py
+│   ├── season_restart.py
+│   └── show.py
 ├── static
 │   └── race_to_4_digit_icon.jpg
-├── supaabse.py #bot that fetches the latest pp for existing players from osu!API and updates it on our database (hosted in pythonanywhere)
-├── supabase_schema.txt #schema of our database tables
-├── templates #website templetes
+├── supaabse.py
+├── supabase_schema.txt
+├── templates
+│   ├── bad_req.html
 │   ├── base.html
 │   ├── dashboard.html
+│   ├── error.html
+│   ├── old_account.html
+│   ├── too_late.html
 │   └── welcome.html
-├── utils #utils for all commands on commands/ <span style="color:green">Documented</span>
-│   ├── archive_utils.py
-│   ├── challenge_final.py
-│   ├── core_v2.py
-│   ├── db_getter.py
+├── utils_v2
+│   ├── challenger_viewer.py
+│   ├── db_handler.py
+│   ├── enums
+│   │   ├── __init__.py
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   ├── status.cpython-313.pyc
+│   │   │   ├── tables.cpython-313.pyc
+│   │   │   └── tables_internals.cpython-313.pyc
+│   │   ├── status.py
+│   │   ├── tables_internals.py
+│   │   └── tables.py
 │   ├── __init__.py
-│   ├── link_utils.py
-│   ├── monitoring.py #runs in parallel with the bot. Moniters for any new user after they do /link to make announcement +
-│   │                 #monitors for results in rival challenges
-│   ├── points_utils.py
-│   ├── render.py
-│   ├── reset_utils.py
-│   ├── rivarly_auth.py
-│   └── rivarly_process.py
-└── web.py #website's backend
+│   ├── log_handler.py
+│   ├── renderer.py
+│   └── reset_utils.py
+├── web.py
+└── web_utils
+    ├── __init__.py
+    ├── web_helper.py
+    └── web_viewer.py
 ```
 
 ---
@@ -176,8 +187,9 @@ Effects both seasonal and universal points
 - **Python 3.12+**
 - **[Discord.py](https://discordpy.readthedocs.io/en/stable/)** – Discord bot framework
 - **[Supabase](https://supabase.com)** – Realtime Postgres database
-- **[Railway](https://railway.app)** – Cloud hosting (used for all deployments)
-- **[Flask](https://flask.palletsprojects.com/)** – Handles OAuth2 web flow
+- **[Railway](https://railway.app)** – Cloud hosting (used for web and bot deployment)
+- **[Pythonanywhere](https://www.pythonanywhere.com/)** – Cloud hosting (used for supaabse.py cronjob)
+- **[Quart](https://quart.palletsprojects.com/en/latest/)** – Handles OAuth2 web flow
 - **[osu.py](https://github.com/Sheppsu/osu.py)** – Python wrapper for the osu! API
 - **[asyncio](https://docs.python.org/3/library/asyncio.html)** – Async tasks, loops, polling
 - **osu! API v2** – For player stats, rank, and pp data
@@ -191,7 +203,7 @@ Effects both seasonal and universal points
 
 | Component     | Role                                       | Deployment                        |
 | ------------- | ------------------------------------------ | --------------------------------- |
-| `auth.py`     | Main Discord bot runtime                   | Railway (Bot Host)                |
+| `bot.py`      | Main Discord bot runtime                   | Railway (Bot Host)                |
 | `web.py`      | OAuth2 account linking + redirect handling | Railway (Web App)                 |
 | `supaabse.py` | PP/Rank sync for all tracked users         | Pythonanywhere/ cron-job (Worker) |
 
@@ -246,26 +258,39 @@ pip install -r requirements.txt
 Create a file named `sec.env` in the root directory. Copy and paste the following template, filling in your specific API keys:
 
 ```bash
-
-# --- Discord ---
+# --- Discord Configuration ---
 DISCORD_TOKEN=      # Main authentication token for the Discord bot instance.
 
 # --- osu! OAuth (Web/Linking) ---
 AUTH_ID=            # osu! Client ID for handling the initial OAuth2 web linking flow.
 AUTH_TOKEN=         # osu! Client Secret for the web linking flow.
+REDIRECT_URL=       # The callback URL for OAuth (e.g., http://localhost:5000/callback).
 
-# --- osu! API (Background Sync) ---
-OSU_CLIENT2_ID=     # Secondary osu! Client ID for the background worker to sync players current_pp.
-OSU_CLIENT2_SECRET= # Secondary osu! Client Secret for background worker to sync players current_pp
+# --- osu! API Clients (Data Fetching) ---
+OSU_CLIENT_ID=      # Primary osu! Client ID for general API requests (user stats, etc).
+OSU_CLIENT_SECRET=  # Primary osu! Client Secret.
+OSU_CLIENT2_ID=     # Secondary osu! Client ID (used for background workers/syncing).
+OSU_CLIENT2_SECRET= # Secondary osu! Client Secret.
 
 # --- Database ---
-SUPABASE_URL=       # The API URL for your Supabase project
-SUPABASE_KEY=       # The Supabase Service Role key for backend database access
+SUPABASE_URL=       # The API URL for your Supabase project.
+SUPABASE_KEY=       # The Supabase Service Role key (or Anon key) for DB access.
 
 # --- Security & Encryption ---
-FLASK_SECKEY=       # Random string used to sign and secure Flask session cookies
-SEC_KEY=            # Encryption key used to serialize Discord IDs in OAuth redirect URLs
+QUART_SECKEY=       # Random string to sign session cookies (Run `openssl rand -hex 32`).
+SEC_KEY=            # Key used to encrypt/serialize Discord IDs in OAuth URLs.
 
+# --- Guild Configuration (IDs) ---
+OSU_ARENA=          # The ID of the main server (Guild) the bot operates in.
+REQ_ROLE=           # Role ID required for admin commands (/season_reset, /delete).
+REQ_ROLE_POINTS=    # Role ID required for point management commands (/points).
+
+# --- Channels & Webhooks ---
+RIVAL_RES_ID=       # Channel ID for posting rival match results.
+WELCOME_ID=         # Channel ID for welcome messages.
+BOT_UPDATES=        # Channel ID for bot status updates/changelogs.
+TOP_PLAY_ID=        # Channel ID for posting new top plays.
+LOGS_WEBHOOK=       # Webhook URL for logging errors and info (avoids channel ID usage).
 ```
 
 ### 4. Database Initialization
@@ -274,9 +299,11 @@ SEC_KEY=            # Encryption key used to serialize Discord IDs in OAuth redi
 
 2. Go to the SQL Editor.
 
-3. Open the file `supabase_schema.txt` located in the root of this repository.
+3. Open the file `utils_v2/supabase_schema.sql` located in the root of this repository.
 
-4. Copy the contents at Sections #2 and #3 and run the query in Supabase to set up the required tables and RPC functions.
+4. Recommended this [Youtube Tutorial](https://www.youtube.com/watch?v=tsw7LzIM5_o) for how you can use the given .sql files to create the required database layout
+
+# NOTE: `supabase_schema.sql` might be outdated as I'm trying to migrate all my modification type queries to be postgres RPC But I can provide you with the latest one if you ask me
 
 ### 5. Running the Bot
 
@@ -285,7 +312,7 @@ You will need to run the components in separate terminal windows (make sure your
 Terminal 1: The Discord Bot
 
 ```bash
-python auth.py
+python bot.py
 ```
 
 Terminal 2: The Web Server (OAuth)

@@ -12,3 +12,4 @@ pytz>=25.1
 aiofiles>=24.1.0
 python-dateutil>=2.9.0.post0
 matplotlib>=3.10.3
+quart>=0.20.0

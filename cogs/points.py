@@ -31,20 +31,21 @@ class Points(commands.Cog):
     ):
         await interaction.response.defer()
 
-        response = await self.db_handler.check_player_existence(player.id)
+        response = await self.db_handler.check_player_existence_for_points(player.id)
 
         if response == FuncStatus.EMPTY:
             await interaction.followup.send(
                 "Such a player does not exist in the database. If you think this is an error, please report!"
             )
             return
+
         if response == FuncStatus.ERROR:
             await interaction.followup.send(
                 "An internal database error has occured. Error logged. Please report!"
             )
             return
 
-        response2 = await self.db_handler.add_points(player.id, points)
+        response2 = await self.db_handler.add_points(points, discord_id=player.id)
 
         if response2:
             new_seasonal_points = response2.get("new_seasonal_points")

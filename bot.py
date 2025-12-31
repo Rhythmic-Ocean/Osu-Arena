@@ -1,3 +1,4 @@
+import logging
 import os
 
 import discord
@@ -82,7 +83,7 @@ class OsuArena(commands.Bot):
             ENV.SUPABASE_URL, ENV.SUPABASE_KEY
         )
         self.osu_client = await init_obj.setup_osu_client(
-            ENV.OSU_CLIENT_ID, ENV.OSU_CLIENT_SECRET, ENV.REDIRECT_URL
+            ENV.OSU_CLIENT_ID, ENV.OSU_CLIENT_SECRET
         )
 
     @property
@@ -105,4 +106,4 @@ class OsuArena(commands.Bot):
 
 if __name__ == "__main__":
     bot = OsuArena()
-    bot.run(ENV.DISCORD_TOKEN)
+    bot.run(ENV.DISCORD_TOKEN, log_level=logging.DEBUG)

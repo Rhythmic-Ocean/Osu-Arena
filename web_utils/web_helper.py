@@ -1,36 +1,34 @@
 from __future__ import annotations
-import os
-import logging
-from dotenv import load_dotenv
-from pydantic_core.core_schema import NoneSchema
+import time
+
 from load_env import ENV
-from typing import TYPE_CHECKING, Optional
+from typing import Any, Optional
+import sys
 
-import osu
-from osu import AsynchronousClient, UserScoreType, SoloScore, Scope
-from utils_v2 import InitExterns, LogHandler
-
-load_dotenv(dotenv_path="sec.env")
-
-logging.basicConfig(filename="core_web.log", level=logging.DEBUG, filemode="w")
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-if TYPE_CHECKING:
-    from supabase import AsyncClient
-    from osu import AsynchronousAuthHandler, AsynchronousClient
-
-OSU_CLIENT_ID = os.getenv("OSU_CLIENT2_ID")
-OSU_CLIENT_SECRET = os.getenv("OSU_CLIENT2_SECRET")
-redirect_url = "http://127.0.0.1:8080"  # not used directly, fine to keep
-
-osu_auth = osu.AuthHandler(OSU_CLIENT_ID, OSU_CLIENT_SECRET, Scope.identify())
-client_updater = Client.from_credentials(
-    OSU_CLIENT_ID, OSU_CLIENT_SECRET, redirect_url, limit_per_minute=50
+from osu import (
+    AsynchronousClient,
+    RequestException,
+    UserScoreType,
+    SoloScore,
+    AsynchronousAuthHandler,
 )
+from supabase import AsyncClient
+from utils_v2 import InitExterns, LogHandler
+from utils_v2.db_handler import DatabaseHandler
+from utils_v2.enums.status import FuncStatus
+from utils_v2.enums.tables import TableMiscellaneous
+from utils_v2.enums.tables_internals import DiscordOsuColumn, LeagueColumn
+
+LEAGUE_MODES = {
+    1000: "master",
+    3000: "elite",
+    10000: "diamond",
+    30000: "platinum",
+    80000: "gold",
+    150000: "silver",
+    250000: "bronze",
+    sys.maxsize: "novice",
+}
 
 
 class WebHelper:
@@ -39,6 +37,7 @@ class WebHelper:
         self.osu_auth: Optional[AsynchronousAuthHandler] = None
         self.supabase_client: Optional[AsyncClient] = None
         self.osu_client: Optional[AsynchronousClient] = None
+        self.db_handler: DatabaseHandler = None
 
     @classmethod
     async def create(cls, log_handler) -> WebHelper:
@@ -52,86 +51,249 @@ class WebHelper:
             ENV.SUPABASE_URL, ENV.SUPABASE_KEY
         )
         self.osu_client = await init_obj.setup_osu_client(
-            ENV.OSU_CLIENT2_ID, ENV.OSU_CLIENT2_SECRET, ENV.CLIENT2_REDIRECT_URL
+            ENV.OSU_CLIENT2_ID, ENV.OSU_CLIENT2_SECRET
         )
+        self.db_handler = DatabaseHandler(self.log_handler, self.supabase_client)
 
         return self
 
-    async def get_top_play(self, osu_id):
+    async def get_top_play(self, osu_id) -> dict[str, Any]:
         if osu_id:
             try:
                 top_scores = await self.osu_client.get_user_scores(
                     osu_id, UserScoreType.BEST, limit=1
                 )
-                for i, score in enumerate(top_scores):
-                    print(f"Type of 'score' is: {type(score)}")
+                for score in top_scores:
                     if isinstance(score, SoloScore):
-                        return (score.beatmapset.title, score.ended_at, score.pp)
+                        return {
+                            DiscordOsuColumn.TOP_PLAY_DATE: score.ended_at.isoformat(),
+                            DiscordOsuColumn.TOP_PLAY_MAP: score.beatmapset.title,
+                            DiscordOsuColumn.TOP_PLAY_PP: int(score.pp),
+                            DiscordOsuColumn.TOP_PLAY_ID: int(score.id),
+                        }
                     else:
-                        return (score.beatmapset.title, score.created_at, score.pp)
+                        return {
+                            DiscordOsuColumn.TOP_PLAY_DATE: score.created_at.isoformat(),
+                            DiscordOsuColumn.TOP_PLAY_MAP: score.beatmapset.title,
+                            DiscordOsuColumn.TOP_PLAY_PP: int(score.pp),
+                            DiscordOsuColumn.TOP_PLAY_ID: int(score.id),
+                        }
+                return FuncStatus.EMPTY
+            except Exception as error:
+                await self.log_handler.report_error(
+                    "WebHelper.get_top_play()",
+                    error,
+                    f"Error getting top play for user with osu_id {osu_id}",
+                )
+            return FuncStatus.ERROR
 
-            except Exception as e:
-                print(f"{e}")
-        return None
+    async def search_and_find(self, discord_id: int) -> dict | None:
+        response = await self.db_handler.get_player(discord_id)
+        return response
 
+    async def check_discord_id(self, discord_id: Optional[int | str]) -> int:
+        if not discord_id:
+            error = Exception("Bad Request.")
+            await self.log_handler.report_error(
+                "WebHelper.search()", error, "Missing discord_id"
+            )
+            return FuncStatus.BAD_REQ
+        try:
+            discord_id = int(str(discord_id).strip())
+        except Exception as error:
+            await self.log_handler.report_error(
+                "WebHelper.search()", error, f"Malformed discord_id {discord_id}"
+            )
+            return FuncStatus.ERROR
+        return discord_id
 
-def search(username: str) -> dict | None:
-    if not isinstance(username, str) or not username.strip():
-        logging.error(f"{username} is not a valid username")
-        return None
-    try:
-        resp = (
-            supabase.table("discord_osu")
-            .select("league")
-            .eq("discord_username", username)
-            .limit(1)
-            .execute()
-        )
-        league = resp.data[0]["league"]
-        response = (
-            supabase.table(league)
-            .select("osu_username", "initial_pp")
-            .eq("discord_username", username)
-            .limit(1)
-            .execute()
-        )
-        if response.data and len(response.data) > 0:
-            response.data[0]["league"] = league
-            return response.data[0]
-    except Exception as e:
-        logging.error(f"Error searching web username: {e}")
-    return None
+    async def get_osu_user(self, code: str, discord_id: int):
+        try:
+            try:
+                await self.osu_auth.get_auth_token(code)
 
+                client = AsynchronousClient(self.osu_auth)
+            except RequestException as _:
+                return FuncStatus.BAD_REQ
 
-def add_user(
-    league, state, username: str, pp: int, g_rank: int, osu_id: int, state_id: int
-) -> None:
-    try:
-        supabase.table("discord_osu").insert(
-            {
-                "discord_username": state,
-                "osu_username": username,
-                "current_pp": pp,
-                "league": league,
-                "future_league": league,
-                "global_rank": g_rank,
-                "osu_id": osu_id,
-                "discord_id": state_id,
-                "new_player_announce": True,
+            user = await client.get_own_data(mode="osu")
+
+            uname = user.username
+            pp = round(user.statistics.pp)
+            osu_id = user.id
+            g_rank = user.statistics.global_rank
+            secs_played = user.statistics.play_time
+            hours_played = secs_played / 3600
+            ii = self._get_ii(pp, hours_played)
+
+            league = "novice"
+            for threshold, league_try in LEAGUE_MODES.items():
+                if g_rank < threshold:
+                    league = league_try
+                    break
+            top_play_data = await self.get_top_play(user.id)
+            player_data = {
+                DiscordOsuColumn.OSU_USERNAME: uname,
+                DiscordOsuColumn.CURRENT_PP: int(pp),
+                DiscordOsuColumn.OSU_ID: osu_id,
+                DiscordOsuColumn.LEAGUE: league,
+                DiscordOsuColumn.GLOBAL_RANK: g_rank,
+                DiscordOsuColumn.II: ii,
             }
-        ).execute()
-    except Exception as e:
-        logging.error(f"Error inserting into discord_osu table: {e}")
+            return {**player_data, **top_play_data}
+        except Exception as error:
+            await self.log_handler.report_error(
+                "WebHelper.get_osu_user()",
+                error,
+                f"Failed getting user data from osu! for user <@{discord_id}>",
+            )
+            return FuncStatus.ERROR
 
-    try:
-        supabase.table(league).insert(
-            {
-                "discord_username": state,
-                "osu_username": username,
-                "initial_pp": pp,
-                "current_pp": pp,
-                "global_rank": g_rank,
-            }
-        ).execute()
-    except Exception as e:
-        logging.error(f"Error inserting in {league} table: {e}")
+    @staticmethod
+    def _get_ii(pp, hours):
+        numerator = -12 + 0.0781 * pp + 6.01e-6 * (pp**2)
+        if hours == 0:
+            return 0
+        ii = round(numerator / hours, 2)
+        return ii
+
+    async def add_user(self, player_data: dict[str, Any]) -> None:
+        try:
+            await (
+                self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                .insert(
+                    {
+                        DiscordOsuColumn.DISCORD_USERNAME: player_data[
+                            DiscordOsuColumn.DISCORD_USERNAME
+                        ],
+                        DiscordOsuColumn.OSU_USERNAME: player_data[
+                            DiscordOsuColumn.OSU_USERNAME
+                        ],
+                        DiscordOsuColumn.CURRENT_PP: player_data[
+                            DiscordOsuColumn.CURRENT_PP
+                        ],
+                        DiscordOsuColumn.LEAGUE: player_data[DiscordOsuColumn.LEAGUE],
+                        DiscordOsuColumn.FUTURE_LEAGUE: player_data[
+                            DiscordOsuColumn.FUTURE_LEAGUE
+                        ],
+                        DiscordOsuColumn.GLOBAL_RANK: player_data[
+                            DiscordOsuColumn.GLOBAL_RANK
+                        ],
+                        DiscordOsuColumn.OSU_ID: player_data[DiscordOsuColumn.OSU_ID],
+                        DiscordOsuColumn.DISCORD_ID: player_data[
+                            DiscordOsuColumn.DISCORD_ID
+                        ],
+                        DiscordOsuColumn.TOP_PLAY_DATE: player_data[
+                            DiscordOsuColumn.TOP_PLAY_DATE
+                        ],
+                        DiscordOsuColumn.TOP_PLAY_MAP: player_data[
+                            DiscordOsuColumn.TOP_PLAY_MAP
+                        ],
+                        DiscordOsuColumn.TOP_PLAY_PP: player_data[
+                            DiscordOsuColumn.TOP_PLAY_PP
+                        ],
+                        DiscordOsuColumn.II: player_data[DiscordOsuColumn.II],
+                        DiscordOsuColumn.NEW_PLAYER_ANNOUNCE: True,
+                        DiscordOsuColumn.TOP_PLAY_ANNOUNCE: False,
+                        DiscordOsuColumn.TOP_PLAY_ID: player_data[
+                            DiscordOsuColumn.TOP_PLAY_ID
+                        ],
+                    }
+                )
+                .execute()
+            )
+        except Exception as error:
+            await self.log_handler.report_error(
+                "WebHelper.add_user()",
+                error,
+                f"Error inserting new row in database table discord_osu for new player <@{player_data[DiscordOsuColumn.DISCORD_ID]}>",
+            )
+            return FuncStatus.ERROR
+
+        try:
+            await (
+                self.supabase_client.table(player_data[DiscordOsuColumn.LEAGUE])
+                .insert(
+                    {
+                        LeagueColumn.DISCORD_USERNAME: player_data[
+                            DiscordOsuColumn.DISCORD_USERNAME
+                        ],
+                        LeagueColumn.OSU_USERNAME: player_data[
+                            DiscordOsuColumn.OSU_USERNAME
+                        ],
+                        LeagueColumn.INITIAL_PP: player_data[
+                            DiscordOsuColumn.CURRENT_PP
+                        ],
+                        LeagueColumn.CURRENT_PP: player_data[
+                            DiscordOsuColumn.CURRENT_PP
+                        ],
+                        LeagueColumn.GLOBAL_RANK: player_data[
+                            DiscordOsuColumn.GLOBAL_RANK
+                        ],
+                        LeagueColumn.DISCORD_ID: player_data[
+                            DiscordOsuColumn.DISCORD_ID
+                        ],
+                        LeagueColumn.II: player_data[DiscordOsuColumn.II],
+                    }
+                )
+                .execute()
+            )
+        except Exception as error:
+            await self.log_handler.report_error
+            (
+                "WebHelper.add_user()",
+                error,
+                f"Error inserting new row in database table {player_data[DiscordOsuColumn.LEAGUE]} for new player <@{player_data[DiscordOsuColumn.DISCORD_ID]}>",
+            )
+            return FuncStatus.ERROR
+        return FuncStatus.GOOD
+
+    async def load_validity(self, discord_id: int, created_at: int):
+        if not discord_id or not created_at:
+            error = Exception("Didn't get any discord_id or created_at")
+            await self.log_handler.report_error("WebHelper.load_validity()", error)
+            return FuncStatus.BAD_REQ
+        try:
+            discord_id = int(str(discord_id).strip())
+        except Exception as error:
+            await self.log_handler.report_error(
+                "WebHelper.load_validity()",
+                error,
+                f"Malformed discord_id <@{discord_id}>",
+            )
+            return FuncStatus.ERROR
+
+        try:
+            created_at = int(str(created_at).strip())
+        except Exception as error:
+            await self.log_handler.report_error(
+                "WebHelper.load_validity()",
+                error,
+                f"Malformed created_at variable from url for <@{discord_id}>",
+            )
+            return FuncStatus.ERROR
+
+        time_now = time.time()
+        if time_now - created_at > 300:
+            return FuncStatus.TOO_LATE
+        return discord_id
+
+    async def check_ouser_existence(self, osu_id: int):
+        try:
+            response = (
+                await self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                .select(DiscordOsuColumn.DISCORD_ID)
+                .eq(DiscordOsuColumn.OSU_ID, osu_id)
+                .maybe_single()
+                .execute()
+            )
+            if response and response.data:
+                return response.data[DiscordOsuColumn.DISCORD_ID]
+            return None
+        except Exception as error:
+            await self.log_handler.report_error(
+                "WebHelper.check_ouser_existence()",
+                error,
+                f"Error for user with osu_id {osu_id}",
+            )
+            return FuncStatus.ERROR

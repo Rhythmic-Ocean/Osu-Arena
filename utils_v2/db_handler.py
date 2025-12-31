@@ -208,7 +208,6 @@ class DatabaseHandler:
     async def arrange_table(
         self, data: list[dict[str, Any]]
     ) -> tuple[list[str], list[tuple[Any]]]:
-        """Helper to format JSON response into Headers + Rows for Renderer."""
         if not data:
             return [], []
         headers = list(data[0].keys())
@@ -260,8 +259,6 @@ class DatabaseHandler:
             )
             if response and response.data:
                 return await self.arrange_table(response.data)
-            return [], []
-
         except Exception as error:
             await self.log_handler.report_error(
                 f"DatabaseHandler._fetch_league_data({table_name})", error
@@ -311,8 +308,11 @@ class DatabaseHandler:
             )
             return [], []
 
-    async def add_points(self, discord_id: int, points: int) -> dict | bool:
-        osu_uname = await self.get_username(discord_id)
+    async def add_points(
+        self, points: int, discord_id: int = None, osu_uname=None
+    ) -> dict | bool:
+        if discord_id:
+            osu_uname = await self.get_username(discord_id)
         try:
             response = (
                 await self.supabase_client.rpc(
@@ -414,7 +414,7 @@ class DatabaseHandler:
                 return response.count
             return 0
         except Exception as error:
-            self.log_handler.report_error(
+            await self.log_handler.report_error(
                 "DatabaseHandler._check_in_challenge_tble()",
                 error,
                 f"The error occured for <@{discord_id}> in {tble_type.capitalize()} table",
@@ -447,7 +447,7 @@ class DatabaseHandler:
                 return True
             return False
         except Exception as error:
-            self.log_handler.report_error(
+            await self.log_handler.report_error(
                 "DatabaseHandler.validate_shared_league()",
                 error,
                 f"Error for <@{discord_id}> checking {league} League",
@@ -468,7 +468,7 @@ class DatabaseHandler:
             return self._validate_challenge_rules(history)
 
         except Exception as error:
-            self.log_handler.report_error(
+            await self.log_handler.report_error(
                 "DatabaseHandler.check_challenge_eligibility()",
                 error,
                 f"Error checking eligibility: {challenger_id} vs {challenged_id}",
@@ -709,7 +709,7 @@ class DatabaseHandler:
             )
             return None
 
-    async def mark_current_archived(self, season: int) -> bool:
+    async def mark_season_archived(self, season: int) -> bool:
         try:
             response = await (
                 self.supabase_client.table(TableMiscellaneous.SEASONS)
@@ -741,7 +741,7 @@ class DatabaseHandler:
                     ).execute()
                 except Exception as error:
                     error_marker = FuncStatus.ERROR
-                    self.log_handler.report_error(
+                    await self.log_handler.report_error(
                         "DatabaseHandler.seasonal_point_update()",
                         error,
                         f"Error syncing {a_league}, seasonal points for these players won't be updated",
@@ -753,7 +753,7 @@ class DatabaseHandler:
                     ).execute()
                 except Exception as error:
                     error_marker = FuncStatus.ERROR
-                    self.log_handler.report_error(
+                    await self.log_handler.report_error(
                         "DatabaseHandler.seasonal_point_update()",
                         error,
                         f"Error syncing {a_league}, seasonal points for these players won't be updated",
@@ -841,7 +841,7 @@ class DatabaseHandler:
                 return response.data
             return []
         except Exception as error:
-            self.log_handler.report_error(
+            await self.log_handler.report_error(
                 "DatabaseHandler.update_leagues()",
                 error,
                 "Error at rpc function get_mismatched_rows()",
@@ -856,7 +856,7 @@ class DatabaseHandler:
         future_league = data[DiscordOsuColumn.FUTURE_LEAGUE]
         discord_id = data[DiscordOsuColumn.DISCORD_ID]
 
-        self.log_handler.report_info(
+        await self.log_handler.report_info(
             f"Processing transfer: {uname} | {league} -> {future_league}",
             "Processing League Transfer",
         )
@@ -891,7 +891,7 @@ class DatabaseHandler:
             await self.supabase_client.table(future_league).insert([payload]).execute()
             return True
         except Exception as error:
-            self.log_handler.report_error(
+            await self.log_handler.report_error(
                 "DatabaseHandler._insert_into_new_league()",
                 error,
                 f"Failed putting <@{data[DiscordOsuColumn.DISCORD_ID]}> into {future_league}",
@@ -910,7 +910,7 @@ class DatabaseHandler:
             )
             return True
         except Exception as error:
-            self.log_handler.report_error(
+            await self.log_handler.report_error(
                 "DatabaseHandler._update_discord_osu_ref()",
                 error,
                 f"Failed updating <@{discord_id}> from {old_league} to {future_league}",
@@ -946,21 +946,25 @@ class DatabaseHandler:
             )
             return None
 
-    async def check_player_existence(self, discord_id: int) -> list[dict[str, Any]]:
+    async def check_player_existence_for_points(
+        self, discord_id: int
+    ) -> list[dict[str, Any]]:
         try:
             response = await (
                 self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
-                .select(f"{DiscordOsuColumn.POINTS, DiscordOsuColumn.SEASONAL_POINTS}")
+                .select(
+                    f"{DiscordOsuColumn.POINTS}, {DiscordOsuColumn.SEASONAL_POINTS}"
+                )
                 .eq(DiscordOsuColumn.DISCORD_ID, discord_id)
-                .single()
+                .maybe_single()
                 .execute()
             )
             if response and response.data:
                 return response.data
             return FuncStatus.EMPTY
         except Exception as error:
-            self.log_handler.report_error(
-                "DatabaseHandler.check_player_existence()",
+            await self.log_handler.report_error(
+                "DatabaseHandler.check_player_existence_for_points()",
                 error,
                 f"Failed to retrive player <@{discord_id}>",
             )
@@ -976,12 +980,92 @@ class DatabaseHandler:
             )
             # data was not deleted, so no response in response.data
             if not response.data:
-                return False
+                raise Exception(f"Failed to find <@{discord_id}>")
             return True
         except Exception as error:
-            self.log_handler.report_error(
+            await self.log_handler.report_error(
                 "DatabaseHandler.remove_player()",
                 error,
                 f"Error occured for <@{discord_id}>",
             )
             return False
+
+    async def get_player(self, discord_id: int) -> dict[str, Any] | None | FuncStatus:
+        query_selector = [
+            DiscordOsuColumn.OSU_USERNAME,
+            DiscordOsuColumn.CURRENT_PP,
+            DiscordOsuColumn.LEAGUE,
+        ]
+        try:
+            response = (
+                await self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                .select(", ".join(query_selector))
+                .eq(DiscordOsuColumn.DISCORD_ID, discord_id)
+                .maybe_single()
+                .execute()
+            )
+
+            if response and response.data:
+                return await self._get_player_from_league(
+                    response.data[DiscordOsuColumn.LEAGUE],
+                    discord_id,
+                    response.data[DiscordOsuColumn.OSU_USERNAME],
+                )
+
+            return None
+
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler.get_player()",
+                error,
+                f"Error checking player <@{discord_id}>",
+            )
+            return FuncStatus.ERROR
+
+    async def _get_player_from_league(
+        self, league_table: str, discord_id: int, osu_username: str
+    ) -> dict[str, Any] | FuncStatus:
+        try:
+            response = (
+                await self.supabase_client.table(league_table)
+                .select(LeagueColumn.INITIAL_PP)
+                .eq(LeagueColumn.DISCORD_ID, discord_id)
+                .maybe_single()
+                .execute()
+            )
+
+            if response and response.data:
+                return {
+                    LeagueColumn.OSU_USERNAME: osu_username,
+                    LeagueColumn.INITIAL_PP: response.data[LeagueColumn.INITIAL_PP],
+                    DiscordOsuColumn.LEAGUE: league_table,
+                }
+
+            raise Exception(
+                f"Data Integrity Error: User <@{discord_id}> exists in 'discord_osu' "
+                f"but is missing from league table '{league_table}'."
+            )
+
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler._get_player_from_league()", error
+            )
+            return FuncStatus.ERROR
+
+    async def check_if_player_exists(self, discord_id: int):
+        try:
+            response = (
+                await self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                .select("*", count="exact", head=True)
+                .eq(DiscordOsuColumn.DISCORD_ID, discord_id)
+                .execute()
+            )
+            if response and response.count > 0:
+                return True
+            return False
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler.check_if_player_exists()",
+                error,
+                f"Error checking for <@{discord_id}>.",
+            )

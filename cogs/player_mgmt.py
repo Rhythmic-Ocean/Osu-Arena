@@ -138,7 +138,7 @@ class PlayerManagement(commands.Cog):
                 f"⚠️ **Not Found**: <@{player.id}> was not in the database.",
                 ephemeral=True,
             )
-            self.log_handler.report_info(
+            await self.log_handler.report_info(
                 f"Attempted to delete non-existent user <@{player.id}>"
             )
             return
@@ -151,7 +151,7 @@ class PlayerManagement(commands.Cog):
 
         if not role_success:
             await interaction.followup.send(
-                "⚠️ Database erasure successful, but failed to reset roles/nickname. Check logs."
+                "⚠️ Database erasure successful, but failed to reset roles/nickname."
             )
 
     async def _role_nick_deletion(

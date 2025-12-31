@@ -53,7 +53,7 @@ class Monitor(commands.Cog, name="monitor"):
             await member.add_roles(role)
         else:
             error = Exception("Unable to handle role.")
-            self.log_handler.report_error(
+            await self.log_handler.report_error(
                 "Monitor.on_member_join()",
                 error,
                 f"Error handling <@{member.id}> Inactive role",
@@ -64,7 +64,7 @@ class Monitor(commands.Cog, name="monitor"):
         discord_id = member.id
         user_name = member.name
 
-        self.log_handler.report_info(
+        await self.log_handler.report_info(
             f"User left: {user_name} ({discord_id}). Processing deletion..."
         )
 
@@ -78,11 +78,11 @@ class Monitor(commands.Cog, name="monitor"):
 
             if response.data:
                 msg = f"Successfully wiped data for {user_name}."
-                self.log_handler.report_info(msg)
+                await self.log_handler.report_info(msg)
 
                 guild = member.guild
                 if not guild:
-                    self.logger.warning("Sync Error: Guild not found.")
+                    await self.logger.warning("Sync Error: Guild not found.")
                     return
                 channel = guild.get_channel(ENV.BOT_UPDATES)
 
@@ -95,7 +95,7 @@ class Monitor(commands.Cog, name="monitor"):
                     )
                     await channel.send(embed=embed)
             else:
-                self.log_handler.report_info(
+                await self.log_handler.report_info(
                     f"User {user_name} left, but was not in the database."
                 )
 
@@ -150,9 +150,11 @@ class Monitor(commands.Cog, name="monitor"):
 
     async def monitor_rivals(self):
         try:
+            # getting all unfinished challenges
             rivals_table = await self.get_rivals()
             for row in rivals_table:
                 try:
+                    # checking if any of the challengers have reached their pp goals
                     is_end = await self.check_end(row)
                     if is_end:
                         winner, loser = is_end
@@ -251,6 +253,10 @@ class Monitor(commands.Cog, name="monitor"):
         try:
             if channel:
                 await channel.send(content=content_str, embed=embed)
+            else:
+                raise Exception(
+                    f"Could not find top play channel. Failed to announce top play for <@{discord_id}>"
+                )
         except Exception as error:
             await self.log_handler.report_error(
                 "Monitor.announce_new_top_play()", error
@@ -282,7 +288,7 @@ class Monitor(commands.Cog, name="monitor"):
             query = (
                 await self.supabase_client.table(TablesRivals.RIVALS)
                 .select(REQ_COLUMNS)
-                .eq(RivalsColumn.CHALLENGE_STATUS, ChallengeStatus.PENDING)
+                .eq(RivalsColumn.CHALLENGE_STATUS, ChallengeStatus.UNFINISHED)
                 .execute()
             )
             return query.data if (query and query.data) else []
@@ -366,8 +372,10 @@ class Monitor(commands.Cog, name="monitor"):
 
     async def challenge_finish_point_distribution(self, winner, loser, for_pp):
         try:
-            response1 = await self.db_handler.add_points(winner, for_pp)
-            response2 = await self.db_handler.add_points(loser, -int(round(for_pp / 2)))
+            response1 = await self.db_handler.add_points(for_pp, osu_username=winner)
+            response2 = await self.db_handler.add_points(
+                -int(round(for_pp / 2)), osu_username=loser
+            )
             if response1 and response2:
                 return True
             raise Exception(

@@ -5,6 +5,7 @@ from bot import OsuArena
 from utils_v2 import ShowTable
 from utils_v2.enums.status import ChallengeStatus
 from utils_v2.enums.tables import TablesLeagues, TablesPoints
+from utils_v2.enums.tables_internals import DiscordOsuColumn
 from utils_v2.renderer import Renderer
 
 
@@ -39,6 +40,15 @@ class Show(commands.Cog):
                 "⚠️ An unknown error occurred while loading the table."
             )
 
+    @show.autocomplete("league")
+    async def show_autocomplete(self, interaction: discord.Interaction, current: str):
+        choices = [t.value for t in ShowTable]
+        return [
+            app_commands.Choice(name=choice.capitalize(), value=choice)
+            for choice in choices
+            if current.lower() in choice.lower()
+        ][:25]
+
     async def _validate_args(
         self, interaction: discord.Interaction, league_name: str
     ) -> bool:
@@ -60,13 +70,14 @@ class Show(commands.Cog):
         return True
 
     async def _fetch_table_data(self, league_name: str):
-        """Wraps the external get_table_data function with error handling."""
         if league_name in [t.value for t in TablesLeagues]:
             data = await self.db_handler.get_current_league_table(league_name)
             title = f"{league_name.capitalize()}"
             return (*data, title) if data else ([], [], title)
 
         elif league_name in [t.value for t in TablesPoints]:
+            if league_name == TablesPoints.S_POINTS:
+                league_name = DiscordOsuColumn.SEASONAL_POINTS
             data = await self.db_handler.get_current_points(league_name)
             if league_name == TablesPoints.POINTS:
                 title = "Universal Points"

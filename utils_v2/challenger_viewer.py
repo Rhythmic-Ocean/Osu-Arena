@@ -36,7 +36,7 @@ class UnifiedChallengeView(discord.ui.View):
         self.add_item(decline_btn)
 
     async def handle_click(self, interaction: discord.Interaction):
-        custom_id = interaction.custom_id
+        custom_id = interaction.data["custom_id"]
 
         try:
             _, challenge_id_str, action = custom_id.split("::")

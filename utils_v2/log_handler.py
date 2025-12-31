@@ -39,7 +39,7 @@ class LogHandler:
 
     def __init__(self, logger_name: str = "discord_bot") -> None:
         self.logger = logging.getLogger(logger_name)
-        self.logger.setLevel(logging.INFO)
+        self.logger.setLevel(logging.DEBUG)
         self._setup_handlers()
         self.webhook_url = ENV.LOGS_WEBHOOK
 
@@ -87,6 +87,8 @@ class LogHandler:
             embed.add_field(
                 name="Message", value=f"```py\n{str(error)[:1000]}```", inline=False
             )
+            if msg:
+                embed.add_field(name="Note :", value=f"\n{msg}")
 
             if len(trace) > 1000:
                 with io.BytesIO(trace.encode()) as f:

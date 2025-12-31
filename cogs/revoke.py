@@ -29,9 +29,7 @@ class Revoke(commands.Cog):
         challenger = interaction.user
         challenged = player
 
-        challenge_id = await self.db_handler.check_matching_challenges(
-            challenger.id, challenged.id
-        )
+        challenge_id = await self.db_handler.check_pending(challenger.id, challenged.id)
 
         if not challenge_id:
             await interaction.followup.send(
@@ -67,7 +65,7 @@ class Revoke(commands.Cog):
                 except discord.NotFound:
                     msg = None
                 except discord.HTTPException as e:
-                    await self.log_handler.report_error("Fetch Message Error", e)
+                    await self.log_handler.report_error("Revoke.revoke_challenge()", e)
 
             if msg:
                 await msg.edit(content=revoke_content)
@@ -87,3 +85,7 @@ class Revoke(commands.Cog):
             await interaction.followup.send(
                 "Your challenge has been internally revoked but the announcement could not be made! Error Logged"
             )
+
+
+async def setup(bot: OsuArena):
+    await bot.add_cog(Revoke(bot))
