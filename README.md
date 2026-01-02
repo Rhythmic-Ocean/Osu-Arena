@@ -2,13 +2,13 @@
 
 ![Docs Status](https://img.shields.io/badge/Docs-Work%20In%20Progress-yellow)
 
-> [Website](https://rt4d-production.up.railway.app) | [Join the Discord](https://discord.gg/rskvV32ZmX)
+> [Website](https://osu-arena.com) | [Join the Discord](https://discord.gg/rskvV32ZmX)
 
-**osu!Arena** is a custom-built, real-time Discord bot designed for the **osu! community** at osu!Arena. It manages league sessions, rivalries, challenges, player verification, and rank syncing for a competitive community racing to reach 4-digit osu! global rank and beyond.
+**osu!Arena** is a custom-built, real-time Discord bot designed for the **osu! community** at osu!Arena. It manages league sessions, rivalries, challenges, player verification, and rank syncing for a competitive community racing.
 
 ---
 
-## Recent (Dec 30 2025)
+## Recent (Jan 2 2026)
 
 - Completed code refactoring and reinitiated all previous functions.
 - New Additions:
@@ -18,9 +18,11 @@
   - Added several new .html templates to display specific content based on the OAuth error type.
   - Most database modification actions are now performed through Postgres RPC, with a few exceptions.
   - New GitHub workflow for nightly backups (in a private repo).
-  - Extended error handling with direct error reporting to the server via WebHook (see more at `utils_v2/error_handling.py`).
-  - `Web.py` now follows View model to match the bot's class-based architecture. [Learn More](https://flask.palletsprojects.com/en/stable/views/)
+  - Extended error handling with direct error reporting to the server via WebHook (see more at `utils_v2/log_handling.py`).
+  - `web.py` now follows View model to match the bot's class-based architecture. [Learn More](https://flask.palletsprojects.com/en/stable/views/)
   - /link generated URLs are only valid for 5 mins now.
+  - The bot and the web app are now hosted on AWS.
+  - New website [URL](https://osu-arena.com)
 
 ---
 
@@ -204,8 +206,8 @@ Effects both seasonal and universal points
 
 | Component     | Role                                       | Deployment                        |
 | ------------- | ------------------------------------------ | --------------------------------- |
-| `bot.py`      | Main Discord bot runtime                   | Railway (Bot Host)                |
-| `web.py`      | OAuth2 account linking + redirect handling | Railway (Web App)                 |
+| `bot.py`      | Main Discord bot runtime                   | AWS (Bot Host)                    |
+| `web.py`      | OAuth2 account linking + redirect handling | AWS (Web App)                     |
 | `supaabse.py` | PP/Rank sync for all tracked users         | Pythonanywhere/ cron-job (Worker) |
 
 ---
