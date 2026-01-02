@@ -42,8 +42,8 @@ class QuartApp:
 
 
 def create_app():
-    server = OsuArena()
-    return server.app()
+    server = QuartApp()
+    return server.app
 
 
 if __name__ == "__main__":
