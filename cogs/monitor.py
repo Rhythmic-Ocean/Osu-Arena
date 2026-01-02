@@ -1,4 +1,5 @@
 from __future__ import annotations
+import asyncio
 from typing import Any, TYPE_CHECKING
 import discord
 import datetime
@@ -17,6 +18,8 @@ from utils_v2.enums.status import FuncStatus
 
 if TYPE_CHECKING:
     from bot import OsuArena
+
+MAX_TRIES = 3
 
 
 class Monitor(commands.Cog, name="monitor"):
@@ -134,67 +137,100 @@ class Monitor(commands.Cog, name="monitor"):
             )
 
     async def monitor_new_players(self):
-        try:
-            new_players = await self.db_handler.new_player_detector()
-            if not new_players:
-                return
-            for player in new_players:
-                try:
-                    discord_id = player[DiscordOsuColumn.DISCORD_ID]
-                    if not await self.db_handler.negate_new_player_announce(discord_id):
-                        raise Exception(
-                            f"New player announce negation failed! Got False for <@{discord_id}>"
+        for tries in range(MAX_TRIES):
+            try:
+                new_players = await self.db_handler.new_player_detector()
+                if not new_players:
+                    return
+                for player in new_players:
+                    try:
+                        discord_id = player[DiscordOsuColumn.DISCORD_ID]
+                        if not await self.db_handler.negate_new_player_announce(
+                            discord_id
+                        ):
+                            raise Exception(
+                                f"New player announce negation failed! Got False for <@{discord_id}>"
+                            )
+                        await self.give_role_nickname(player)
+                        await self.announce_new_player(player)
+                    except Exception as error:
+                        await self.log_handler.report_error(
+                            "Monitor.monitor_new_players() loop", error
                         )
-                    await self.give_role_nickname(player)
-                    await self.announce_new_player(player)
-                except Exception as error:
+                return
+            except Exception as e:
+                if tries == MAX_TRIES - 1:
                     await self.log_handler.report_error(
-                        "Monitor.monitor_new_players() loop", error
+                        "Monitor.monitor_new_players() outer", e
                     )
-        except Exception as e:
-            await self.log_handler.report_error(
-                "Monitor.monitor_new_players() outer", e
-            )
+                await self.log_handler.report_info(
+                    f"Failed running Monitor.monitor_new_players(). Current tries : {tries + 1}/{MAX_TRIES}.\nThis process will sleep for 5 extra seconds before trying again."
+                )
+                await asyncio.sleep(5)
 
     async def monitor_top_plays(self):
-        try:
-            top_plays = await self.db_handler.top_play_detector()
-            if not top_plays:
-                return
-            for play in top_plays:
-                try:
-                    discord_id = play[DiscordOsuColumn.DISCORD_ID]
-                    if not await self.db_handler.negate_top_play(discord_id):
-                        raise Exception(
-                            f"Top play negation failed! Got False for <@{discord_id}>"
+        for tries in range(MAX_TRIES):
+            try:
+                top_plays = await self.db_handler.top_play_detector()
+
+                if not top_plays:
+                    return
+
+                for play in top_plays:
+                    try:
+                        discord_id = play[DiscordOsuColumn.DISCORD_ID]
+                        if not await self.db_handler.negate_top_play(discord_id):
+                            raise Exception(
+                                f"Top play negation failed! Got False for <@{discord_id}>"
+                            )
+                        top_play_id = play[DiscordOsuColumn.TOP_PLAY_ID]
+                        await self.announce_new_top_play(top_play_id, discord_id)
+                    except Exception as error:
+                        await self.log_handler.report_error(
+                            "Monitor.monitor_top_plays() loop", error
                         )
-                    top_play_id = play[DiscordOsuColumn.TOP_PLAY_ID]
-                    await self.announce_new_top_play(top_play_id, discord_id)
-                except Exception as error:
+                return
+
+            except Exception as e:
+                if tries == MAX_TRIES - 1:
                     await self.log_handler.report_error(
-                        "Monitor.monitor_top_plays() loop", error
+                        "Monitor.monitor_top_plays() outer", e
                     )
-        except Exception as e:
-            await self.log_handler.report_error("Monitor.monitor_top_plays() outer", e)
+
+                await self.log_handler.report_info(
+                    f"Failed running Monitor.monitor_top_plays(). Current tries : {tries + 1}/{MAX_TRIES}.\nThis process will sleep for 5 seconds before trying again."
+                )
+                await asyncio.sleep(5)
 
     async def monitor_rivals(self):
-        try:
-            # getting all unfinished challenges
-            rivals_table = await self.get_rivals()
-            for row in rivals_table:
-                try:
-                    # checking if any of the challengers have reached their pp goals
-                    is_end = await self.check_end(row)
-                    if is_end:
-                        winner, loser = is_end
-                        await self.end_challenge(row, winner, loser)
-                        await self.send_announcement(row, winner, loser)
-                except Exception as e:
-                    await self.log_handler.report_error(
-                        "Monitor.monitor_rivals() loop", e
-                    )
-        except Exception as e:
-            await self.log_handler.report_error("Monitor.monitor_rivals() outer", e)
+        for tries in range(MAX_TRIES):
+            try:
+                rivals_table = await self.get_rivals()
+                
+                if not rivals_table:
+                    return
+
+                for row in rivals_table:
+                    try:
+                        is_end = await self.check_end(row)
+                        if is_end:
+                            winner, loser = is_end
+                            await self.end_challenge(row, winner, loser)
+                            await self.send_announcement(row, winner, loser)
+                    except Exception as e:
+                        await self.log_handler.report_error(
+                            "Monitor.monitor_rivals() loop", e
+                        )
+                return 
+
+            except Exception as e:
+                if tries == MAX_TRIES - 1:
+                    await self.log_handler.report_error("Monitor.monitor_rivals() outer", e)
+                
+                await self.log_handler.report_info(
+                    f"Failed running Monitor.monitor_rivals(). Current tries : {tries + 1}/{MAX_TRIES}.\nThis process will sleep for 5 seconds before trying again."
+                )
+                await asyncio.sleep(5)
 
     async def give_role_nickname(self, player: list[dict[str, Any]]) -> None:
         discord_id = player[DiscordOsuColumn.DISCORD_ID]

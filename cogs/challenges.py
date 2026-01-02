@@ -7,11 +7,7 @@ from discord.ext import commands
 from typing import TYPE_CHECKING, Optional, cast
 
 from load_env import ENV
-from utils_v2 import (
-    ChallengeFailed,
-    UnifiedChallengeView,
-    TablesLeagues,
-)
+from utils_v2 import ChallengeFailed, TablesLeagues, ChallengeView
 from utils_v2.db_handler import DatabaseHandler
 from utils_v2.log_handler import LogHandler
 
@@ -176,7 +172,7 @@ class Challenge(commands.Cog):
     async def _distribute_challenge(
         self, interaction, challenger, target, pp, league, challenge_id
     ):
-        view = UnifiedChallengeView(bot=self.bot, challenge_id=challenge_id)
+        view = ChallengeView(challenge_id=challenge_id)
 
         try:
             await target.send(

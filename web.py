@@ -2,6 +2,7 @@ import os
 import logging
 from quart import Quart
 
+from bot import OsuArena
 from load_env import ENV
 from utils_v2 import LogHandler
 from web_utils import HomeView, DashboardView, WebHelper
@@ -38,6 +39,11 @@ class QuartApp:
     def run(self):
         port = int(os.environ.get("PORT", 8080))
         self.app.run(host="0.0.0.0", port=port, debug=True)
+
+
+def create_app():
+    server = OsuArena()
+    return server.app()
 
 
 if __name__ == "__main__":

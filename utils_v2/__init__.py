@@ -29,8 +29,7 @@ from .enums import (
     FuncStatus,
 )
 
-from .challenger_viewer import UnifiedChallengeView
-
+from .challenger_viewer import ChallengeView, DynamicButtons
 from .log_handler import LogHandler
 
 from .db_handler import DatabaseHandler
@@ -82,7 +81,8 @@ __all__ = [
     "ChallengeFailed",
     "FuncStatus",
     # Viewer
-    "UnifiedChallengeView",
+    "ChallengeView",
+    "DynamicButtons",
     "ResetConfirmView",
     # Init
     "InitExterns",

@@ -6,7 +6,13 @@ from discord.ext import commands
 from load_env import ENV
 
 
-from utils_v2 import LogHandler, DatabaseHandler, UnifiedChallengeView, InitExterns
+from utils_v2 import (
+    LogHandler,
+    DatabaseHandler,
+    InitExterns,
+    ChallengeView,
+    DynamicButtons,
+)
 
 
 intents = discord.Intents.default()
@@ -31,8 +37,9 @@ class OsuArena(commands.Bot):
 
     async def setup_hook(self) -> None:
         self.logger.info(f"Logged in as {self.user.name}")
-        self.add_view(UnifiedChallengeView(bot=self))
+        self.add_view(ChallengeView())
 
+        self.add_dynamic_items(DynamicButtons)
         await self.init_externs()
         self.db_handler = DatabaseHandler(self.log_handler, self.supabase_client)
 

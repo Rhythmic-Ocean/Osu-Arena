@@ -1,6 +1,7 @@
 from __future__ import annotations
 import discord
 from typing import TYPE_CHECKING
+import re
 
 from load_env import ENV
 
@@ -8,13 +9,9 @@ if TYPE_CHECKING:
     from bot import OsuArena
 
 
-class UnifiedChallengeView(discord.ui.View):
-    def __init__(self, bot: OsuArena, challenge_id: int = None):
+class ChallengeView(discord.ui.View):
+    def __init__(self, challenge_id: int = None):
         super().__init__(timeout=None)
-        self.bot = bot
-        self.db_handler = self.bot.db_handler
-        self.log_handler = self.bot.log_handler
-
         if challenge_id:
             self.add_buttons(challenge_id)
 
@@ -24,92 +21,114 @@ class UnifiedChallengeView(discord.ui.View):
             style=discord.ButtonStyle.success,
             custom_id=f"challenge::{challenge_id}::accept",
         )
-        accept_btn.callback = self.handle_click
         self.add_item(accept_btn)
-
         decline_btn = discord.ui.Button(
             label="Decline",
             style=discord.ButtonStyle.danger,
             custom_id=f"challenge::{challenge_id}::decline",
         )
-        decline_btn.callback = self.handle_click
         self.add_item(decline_btn)
 
-    async def handle_click(self, interaction: discord.Interaction):
-        custom_id = interaction.data["custom_id"]
 
-        try:
-            _, challenge_id_str, action = custom_id.split("::")
-            challenge_id = int(challenge_id_str)
-        except Exception as error:
-            await self.log_handler.report_error(
-                "UnifiedChallengeView.handle_click()", error, f"Bad ID: {custom_id}"
+class DynamicButtons(
+    discord.ui.DynamicItem[discord.ui.Button],
+    template=r"challenge::(?P<cid>\d+)::(?P<action>accept|decline)",
+):
+    def __init__(self, cid: int, action: str) -> None:
+        label = "Accept" if action == "accept" else "Decline"
+        style = (
+            discord.ButtonStyle.success
+            if action == "accept"
+            else discord.ButtonStyle.danger
+        )
+        super().__init__(
+            discord.ui.Button(
+                label=label, style=style, custom_id=f"challenge::{cid}::{action}"
             )
-            return await interaction.response.edit_message(
-                content="❌ Error parsing ID.", view=None
-            )
+        )
+        self.cid = cid
+        self.action = action
 
+    @classmethod
+    async def from_custom_id(
+        cls,
+        interaction: discord.Interaction,
+        item: discord.ui.Button,
+        match: re.Match[str],
+        /,
+    ):
+        cid = int(match["cid"])
+        action = match["action"]
+        return cls(cid, action)
+
+    async def callback(self, interaction: discord.Interaction) -> None:
+        await interaction.response.defer()
+        challenge_id = self.cid
+        action = self.action
         if action == "accept":
             await self.accept_logic(interaction, challenge_id)
         elif action == "decline":
             await self.decline_logic(interaction, challenge_id)
 
     async def accept_logic(self, interaction: discord.Interaction, challenge_id: int):
-        result = await self.db_handler.accept_challenge(challenge_id)
+        bot: OsuArena = interaction.client
+        result = await bot.db_handler.accept_challenge(challenge_id)
 
         if not result:
-            return await interaction.response.edit_message(
+            return await interaction.edit_original_response(
                 content="❌ Invalid challenge or one the challengers left the server..",
                 view=None,
             )
 
         challenger_id, challenged_id, for_pp = result
 
-        await interaction.response.edit_message(
+        await interaction.edit_original_response(
             content=f"✅ You accepted the challenge for {for_pp} PP!", view=None
         )
 
         await self.update_public_log(
+            bot,
             challenge_id,
             f"<@{challenger_id}> vs <@{challenged_id}> | {for_pp} PP | Unfinished",
         )
 
     async def decline_logic(self, interaction: discord.Interaction, challenge_id: int):
-        result = await self.db_handler.decline_challenge(challenge_id)
-
+        bot: OsuArena = interaction.client
+        result = await bot.db_handler.decline_challenge(challenge_id)
+        bot: OsuArena = interaction.client
         if not result:
-            return await interaction.response.edit_message(
+            return await interaction.edit_original_response(
                 content="❌ Challenge not found or expired.", view=None
             )
 
         challenger_id, challenged_id, _ = result
 
-        await interaction.response.edit_message(
+        await interaction.edit_original_response(
             content="🚫 You declined the challenge.", view=None
         )
 
         await self.update_public_log(
-            challenge_id, f"<@{challenger_id}> vs <@{challenged_id}> | Declined"
+            bot, challenge_id, f"<@{challenger_id}> vs <@{challenged_id}> | Declined"
         )
 
-    async def update_public_log(self, challenge_id: int, new_content: str):
-        """Helper to find the log message and edit it, or send a new one."""
-        channel = self.bot.get_channel(ENV.RIVAL_RESULTS_ID)
+    async def update_public_log(
+        self, bot: OsuArena, challenge_id: int, new_content: str
+    ):
+        channel = bot.get_channel(ENV.RIVAL_RESULTS_ID)
         if not channel:
-            await self.log_handler.report_error(
-                "UnifiedChallengeView",
+            await bot.log_handler.report_error(
+                "ChallengeView",
                 Exception("Channel Not Found"),
                 "Check ENV.RIVAL_RESULTS_ID",
             )
             return
 
-        msg_id = await self.db_handler.get_msg_id(challenge_id)
+        msg_id = await bot.db_handler.get_msg_id(challenge_id)
 
         if msg_id:
             try:
                 msg = await channel.fetch_message(msg_id)
-                await msg.edit(content=new_content)
-                return
+                await msg.delete()
             except discord.NotFound:
                 pass
 
