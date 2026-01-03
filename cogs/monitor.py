@@ -12,7 +12,9 @@ from utils_v2 import (
     RivalsData,
     DiscordOsuColumn,
     Renderer,
+    TablesLeagues,
 )
+from zoneinfo import ZoneInfo
 from load_env import ENV
 from utils_v2.enums.status import FuncStatus
 
@@ -20,6 +22,8 @@ if TYPE_CHECKING:
     from bot import OsuArena
 
 MAX_TRIES = 3
+
+weekly_time = datetime.time(hour=15, minute=12, tzinfo=ZoneInfo("America/Chicago"))
 
 
 class Monitor(commands.Cog, name="monitor"):
@@ -31,11 +35,12 @@ class Monitor(commands.Cog, name="monitor"):
         self.osu_client = self.bot.osu_client
         self.renderer = Renderer(self.bot)
         self.logger = self.log_handler.logger
-
         self.monitor_database.start()
+        self.weekly_point_update.start()
 
     def cog_unload(self):
         self.monitor_database.cancel()
+        self.weekly_point_update.cancel()
 
     @tasks.loop(seconds=10)
     async def monitor_database(self):
@@ -48,6 +53,70 @@ class Monitor(commands.Cog, name="monitor"):
 
     @monitor_database.before_loop
     async def before_monitor_database(self):
+        await self.bot.wait_until_ready()
+
+    @tasks.loop(time=weekly_time)
+    async def weekly_point_update(self):
+        naw = datetime.datetime.now(ZoneInfo("America/Chicago"))
+        if naw.weekday() != 5:
+            return
+
+        guild = self.bot.guild
+        channel = guild.get_channel(ENV.BOT_UPDATES)
+
+        for a_league in TablesLeagues:
+            try:
+                await self.supabase_client.rpc(
+                    "sync_table_pp", {"tbl_name": a_league}
+                ).execute()
+            except Exception as error:
+                await self.log_handler.report_error(
+                    "Monitor.weekly_point_update()",
+                    error,
+                    f"Error syncing {a_league.capitalize()}",
+                )
+                continue
+
+            try:
+                response = await self.supabase_client.rpc(
+                    "award_weekly_winner", {"league_table_name": a_league}
+                ).execute()
+            except Exception as error:
+                await self.log_handler.report_error(
+                    "Monitor.weekly_point_update()",
+                    error,
+                    "Error at function rpc function awark weekly winner()",
+                )
+                return
+
+            datas = response.data
+
+            if datas and channel:
+                for row in datas:
+                    # 1. Parse the dictionary keys returned by Postgres
+                    discord_id = row["discord_id"]
+                    total_points = row["new_points"]
+                    seasonal_points = row["new_seasonal_points"]
+
+                    # 2. Create a nice formatted message
+                    message = (
+                        f"🏆 **Weekly Winner: {a_league}**\n"
+                        f"Congratulations <@{discord_id}>! You've been awarded **+100 points**.\n"
+                        f"> **Total Points:** {total_points}\n"
+                        f"> **Seasonal Points:** {seasonal_points}"
+                    )
+
+                    try:
+                        await channel.send(content=message)
+                    except Exception as error:
+                        await self.log_handler.report_error(
+                            "Monitor.weekly_point_update()",
+                            error,
+                            "Error sending message to channel.",
+                        )
+
+    @weekly_point_update.before_loop
+    async def before_weekly_point_update(self):
         await self.bot.wait_until_ready()
 
     @commands.Cog.listener()
@@ -169,6 +238,9 @@ class Monitor(commands.Cog, name="monitor"):
                 await asyncio.sleep(5)
 
     async def monitor_top_plays(self):
+        if not self.osu_client:
+            raise Exception()
+            self.log_handler.report_error()
         for tries in range(MAX_TRIES):
             try:
                 top_plays = await self.db_handler.top_play_detector()
@@ -177,18 +249,27 @@ class Monitor(commands.Cog, name="monitor"):
                     return
 
                 for play in top_plays:
-                    try:
-                        discord_id = play[DiscordOsuColumn.DISCORD_ID]
-                        if not await self.db_handler.negate_top_play(discord_id):
-                            raise Exception(
-                                f"Top play negation failed! Got False for <@{discord_id}>"
+                    for tries in range(MAX_TRIES):
+                        try:
+                            discord_id = play[DiscordOsuColumn.DISCORD_ID]
+                            top_play_id = play[DiscordOsuColumn.TOP_PLAY_ID]
+                            await self.announce_new_top_play(top_play_id, discord_id)
+                            if not await self.db_handler.negate_top_play(discord_id):
+                                raise Exception(
+                                    f"Top play negation failed! Got False for <@{discord_id}>"
+                                )
+                            break
+                        except Exception as error:
+                            if tries == MAX_TRIES - 1:
+                                await self.log_handler.report_error(
+                                    "Monitor.monitor_top_plays() loop",
+                                    error,
+                                    f"Error for top_play: {top_play_id}, error announcing for <@{discord_id}>",
+                                )
+                            await self.log_handler.report_info(
+                                f"Failed running Monitor.monitor_top_plays() loop . Current tries : {tries + 1}/{MAX_TRIES}.\nThis process will sleep for 5 seconds before trying again.\n Error announcing top play for player <@{discord_id}>."
                             )
-                        top_play_id = play[DiscordOsuColumn.TOP_PLAY_ID]
-                        await self.announce_new_top_play(top_play_id, discord_id)
-                    except Exception as error:
-                        await self.log_handler.report_error(
-                            "Monitor.monitor_top_plays() loop", error
-                        )
+                            await asyncio.sleep(5)
                 return
 
             except Exception as e:
@@ -206,7 +287,7 @@ class Monitor(commands.Cog, name="monitor"):
         for tries in range(MAX_TRIES):
             try:
                 rivals_table = await self.get_rivals()
-                
+
                 if not rivals_table:
                     return
 
@@ -221,12 +302,14 @@ class Monitor(commands.Cog, name="monitor"):
                         await self.log_handler.report_error(
                             "Monitor.monitor_rivals() loop", e
                         )
-                return 
+                return
 
             except Exception as e:
                 if tries == MAX_TRIES - 1:
-                    await self.log_handler.report_error("Monitor.monitor_rivals() outer", e)
-                
+                    await self.log_handler.report_error(
+                        "Monitor.monitor_rivals() outer", e
+                    )
+
                 await self.log_handler.report_info(
                     f"Failed running Monitor.monitor_rivals(). Current tries : {tries + 1}/{MAX_TRIES}.\nThis process will sleep for 5 seconds before trying again."
                 )

@@ -89,9 +89,7 @@ class OsuArena(commands.Bot):
         self.supabase_client = await init_obj.setup_supabase_client(
             ENV.SUPABASE_URL, ENV.SUPABASE_KEY
         )
-        self.osu_client = await init_obj.setup_osu_client(
-            ENV.OSU_CLIENT_ID, ENV.OSU_CLIENT_SECRET
-        )
+        self.osu_client = await init_obj.setup_osu_client(self.osu_auth)
 
     @property
     def guild(self) -> discord.Guild | None:

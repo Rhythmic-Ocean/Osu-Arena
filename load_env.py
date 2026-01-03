@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import os
 
 
-load_dotenv(dotenv_path="sec.env")
+load_dotenv(dotenv_path="local.env")
 
 
 class ENV:
