@@ -187,7 +187,9 @@ class Monitor(commands.Cog, name="monitor"):
                         await self.announce_new_top_play(top_play_id, discord_id)
                     except Exception as error:
                         await self.log_handler.report_error(
-                            "Monitor.monitor_top_plays() loop", error
+                            "Monitor.monitor_top_plays() loop",
+                            error,
+                            f"Failed reporting top_play for <@{discord_id}>",
                         )
                 return
 
@@ -206,7 +208,7 @@ class Monitor(commands.Cog, name="monitor"):
         for tries in range(MAX_TRIES):
             try:
                 rivals_table = await self.get_rivals()
-                
+
                 if not rivals_table:
                     return
 
@@ -221,12 +223,14 @@ class Monitor(commands.Cog, name="monitor"):
                         await self.log_handler.report_error(
                             "Monitor.monitor_rivals() loop", e
                         )
-                return 
+                return
 
             except Exception as e:
                 if tries == MAX_TRIES - 1:
-                    await self.log_handler.report_error("Monitor.monitor_rivals() outer", e)
-                
+                    await self.log_handler.report_error(
+                        "Monitor.monitor_rivals() outer", e
+                    )
+
                 await self.log_handler.report_info(
                     f"Failed running Monitor.monitor_rivals(). Current tries : {tries + 1}/{MAX_TRIES}.\nThis process will sleep for 5 seconds before trying again."
                 )
