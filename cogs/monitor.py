@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 MAX_TRIES = 3
 
-weekly_time = datetime.time(hour=15, minute=12, tzinfo=ZoneInfo("America/Chicago"))
+weekly_time = datetime.time(hour=0, minute=0, tzinfo=ZoneInfo("America/Chicago"))
 
 
 class Monitor(commands.Cog, name="monitor"):
@@ -58,7 +58,7 @@ class Monitor(commands.Cog, name="monitor"):
     @tasks.loop(time=weekly_time)
     async def weekly_point_update(self):
         naw = datetime.datetime.now(ZoneInfo("America/Chicago"))
-        if naw.weekday() != 5:
+        if naw.weekday() != 0:
             return
 
         guild = self.bot.guild
@@ -238,9 +238,6 @@ class Monitor(commands.Cog, name="monitor"):
                 await asyncio.sleep(5)
 
     async def monitor_top_plays(self):
-        if not self.osu_client:
-            raise Exception()
-            self.log_handler.report_error()
         for tries in range(MAX_TRIES):
             try:
                 top_plays = await self.db_handler.top_play_detector()
@@ -270,7 +267,6 @@ class Monitor(commands.Cog, name="monitor"):
                                 f"Failed running Monitor.monitor_top_plays() loop . Current tries : {tries + 1}/{MAX_TRIES}.\nThis process will sleep for 5 seconds before trying again.\n Error announcing top play for player <@{discord_id}>."
                             )
                             await asyncio.sleep(5)
-                return
 
             except Exception as e:
                 if tries == MAX_TRIES - 1:
