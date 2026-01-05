@@ -241,7 +241,7 @@ cd Osu-Arena
 
 ### 2. Configuring .env
 
-Create a file named `sec.env` in the root directory. Copy and paste the following template, filling in your specific API keys:
+Create a file named `local.env` in the root directory. Copy and paste the following template, filling in your specific API keys:
 
 ```bash
 # --- Discord Configuration ---
