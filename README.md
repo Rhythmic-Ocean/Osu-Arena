@@ -8,10 +8,11 @@
 
 ---
 
-## Recent (Jan 2 2026)
+## Recent (Jan 2026)
 
 - Completed code refactoring and reinitiated all previous functions.
 - New Additions:
+  - The project now uses docker for better stability
   - Now with persistent views, challenge requests can theoretically last indefinitely.
   - The bot now uses the Cogs model. [Learn More](https://github.com/kkrypt0nn/Python-Discord-Bot-Template)
   - The website uses Quart instead of Flask for proper integration with the async Database Manager.
@@ -138,6 +139,7 @@ Effects both seasonal and universal points
 ## Project Structure
 
 ```
+
 ├── bot.py
 ├── cogs
 │   ├── archived.py
@@ -148,10 +150,13 @@ Effects both seasonal and universal points
 │   ├── revoke.py
 │   ├── season_restart.py
 │   └── show.py
+├── compose.yaml
+├── Dockerfile
+├── load_env.py
+├── requirements.txt
 ├── static
 │   └── race_to_4_digit_icon.jpg
 ├── supaabse.py
-├── supabase_schema.txt
 ├── templates
 │   ├── bad_req.html
 │   ├── base.html
@@ -164,21 +169,19 @@ Effects both seasonal and universal points
 │   ├── challenger_viewer.py
 │   ├── db_handler.py
 │   ├── enums
-│   │   ├── __init__.py
-│   │   │   ├── __init__.cpython-313.pyc
-│   │   │   ├── status.cpython-313.pyc
-│   │   │   ├── tables.cpython-313.pyc
-│   │   │   └── tables_internals.cpython-313.pyc
 │   │   ├── status.py
 │   │   ├── tables_internals.py
 │   │   └── tables.py
+│   ├── init_externs.py
 │   ├── __init__.py
 │   ├── log_handler.py
+│   ├── osuapi_handler.py
 │   ├── renderer.py
-│   └── reset_utils.py
+│   ├── reset_utils.py
+│   └── supabase_schema.sql
+├── web.log
 ├── web.py
 └── web_utils
-    ├── __init__.py
     ├── web_helper.py
     └── web_viewer.py
 ```
@@ -190,11 +193,13 @@ Effects both seasonal and universal points
 - **Python 3.12+**
 - **[Discord.py](https://discordpy.readthedocs.io/en/stable/)** – Discord bot framework
 - **[Supabase](https://supabase.com)** – Realtime Postgres database
-- **[Railway](https://railway.app)** – Cloud hosting (used for web and bot deployment)
+- **[AWS](https://aws.amazon.com/)** – Cloud hosting (used for web and bot deployment)
 - **[Pythonanywhere](https://www.pythonanywhere.com/)** – Cloud hosting (used for supaabse.py cronjob)
 - **[Quart](https://quart.palletsprojects.com/en/latest/)** – Handles OAuth2 web flow
 - **[osu.py](https://github.com/Sheppsu/osu.py)** – Python wrapper for the osu! API
 - **[asyncio](https://docs.python.org/3/library/asyncio.html)** – Async tasks, loops, polling
+- **[Docker](https://docs.docker.com/)** – Containerized for consistent deployment
+- **[Nginx](https://nginx.org/)** – to setup reverse proxy from local port 5000 as well as SSL certification for the domain
 - **osu! API v2** – For player stats, rank, and pp data
 - **As well as other python libs like plottable.py, panads.py etc... (All in requirements.txt)**
 
@@ -218,7 +223,7 @@ Follow these steps to get a development instance of **osu!Arena** running locall
 
 ### Prerequisites
 
-- **Python 3.12+**
+- Docker
 - **Git**
 - A **Supabase** project (Free tier works)
 - **Discord Application** (Bot Token + Client ID)
@@ -234,29 +239,7 @@ git clone [https://github.com/YOUR_USERNAME/Osu-Arena.git]
 cd Osu-Arena
 ```
 
-### 2. Python Environment Setup
-
-It is recommended to use a virtual environment to manage dependencies.
-
-1. Create a virtual environment
-
-```bash
-python3 -m venv venv
-```
-
-1. Activate the environment (Linux/macOS)
-
-```bash
-source venv/bin/activate
-```
-
-1. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Configuring .env
+### 2. Configuring .env
 
 Create a file named `sec.env` in the root directory. Copy and paste the following template, filling in your specific API keys:
 
@@ -296,7 +279,7 @@ TOP_PLAY_ID=        # Channel ID for posting new top plays.
 LOGS_WEBHOOK=       # Webhook URL for logging errors and info (avoids channel ID usage).
 ```
 
-### 4. Database Initialization
+### 3. Database Initialization
 
 1. Log in to your Supabase Dashboard.
 
@@ -308,24 +291,22 @@ LOGS_WEBHOOK=       # Webhook URL for logging errors and info (avoids channel ID
 
 **NOTE**: `supabase_schema.sql` might be outdated as I'm trying to migrate all my modification type queries to be postgres RPC But I can provide you with the latest one if you ask me
 
-### 5. Running the Bot
+### 4. Running the Bot
 
-You will need to run the components in separate terminal windows (make sure your virtual environment is activated in each):
+The bot and the server will run in different container, all are configured in compose.yaml file
 
-Terminal 1: The Discord Bot
-
-```bash
-python bot.py
-```
-
-Terminal 2: The Web Server (OAuth)
+To watch live bot/ web logs:
 
 ```bash
-python web.py
+
+docker compose up --watch
 ```
 
-Terminal 3: The Background Sync (Optional) Only run this if you need to test live PP updates.
+To let the bot/ web run in the background:
 
 ```bash
-python supabase_sync.py
+
+docker compose up -d
 ```
+
+### Note: the web is configured to expose itself at port 5000
