@@ -50,9 +50,7 @@ class WebHelper:
         self.supabase_client = await init_obj.setup_supabase_client(
             ENV.SUPABASE_URL, ENV.SUPABASE_KEY
         )
-        self.osu_client = await init_obj.setup_osu_client(
-            ENV.OSU_CLIENT2_ID, ENV.OSU_CLIENT2_SECRET
-        )
+        self.osu_client = await init_obj.setup_osu_client(self.osu_auth)
         self.db_handler = DatabaseHandler(self.log_handler, self.supabase_client)
 
         return self

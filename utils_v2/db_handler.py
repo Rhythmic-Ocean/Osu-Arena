@@ -1,3 +1,8 @@
+"""
+Every functionality that requires access to the database goes through this class.
+Common class for both the website and the bot for database access
+"""
+
 from __future__ import annotations
 import datetime
 from typing import Any
@@ -26,19 +31,51 @@ from .enums import (
 
 
 class DatabaseHandler:
-    def __init__(self, log_handler: LogHandler, supabase_client: AsyncClient = None):
+    """Represents an interface for interacting with the PostgreSQL database via Supabase.
+
+    This class handles data retrieval and formatting for operations across
+    both the Discord bot and the web dashboard.
+
+    Parameters
+    -----------
+    log_handler: :class:`LogHandler`
+        The logger used for error handling and exception reporting.
+        Typically, this should be an existing instance configured for
+        either the bot or the web application.
+    supabase_client: :class:`supabase.AsyncClient`
+        The asynchronous client used to communicate with the Supabase API.
+    """
+
+    def __init__(self, log_handler: LogHandler, supabase_client: AsyncClient):
         self.log_handler = log_handler
         self.supabase_client = supabase_client
 
     async def get_discord_id(
-        self, osu_username: str = None, discord_username: str = None
+        self, osu_username: str | None = None, discord_username: str | None = None
     ) -> int | None:
+        """|coro|
+        A coroutine to access a user's discord_id through their osu/discord username.
+        Give only one of the two arguments at a time
+
+        Parameters
+        -----------
+        osu_username : class:`str`
+            user's osu username
+
+        discord_username : class:`str`
+        user's discord username
+
+        Returns
+        -----------
+        int | None
+            The discord_id of the corresponding user if it exists
+        """
+        # WARNING: Querying by discord_username is unreliable.
+        # Users can change their Discord names, potentially
+        # rendering database records stale. Always prefer
+        # querying by osu_username or discord_id when possible.
         log_context = "Unknown"
         try:
-            # WARNING: Querying by discord_username is unreliable.
-            # Users can change their Discord names, potentially
-            # rendering database records stale. Always prefer
-            # querying by osu_username or discord_id when possible.
             if discord_username:
                 log_context = f"discord_username: {discord_username}"
                 query = await self._id_from_discord(discord_username)

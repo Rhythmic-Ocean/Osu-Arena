@@ -6,6 +6,10 @@ services:
     env_file: local.env
     command: python bot.py
     restart : always
+    volumes:
+      - type : bind
+        source : .
+        target : /app
     develop:
       watch:
         - action: sync+restart
@@ -22,13 +26,12 @@ services:
     env_file: local.env
     command : hypercorn "web:create_app()" --bind '[0.0.0.0]':5000 --reload
     ports:
-      - 5000:5000
+      - 127.0.0.1:5000:5000
     volumes:
       - type : bind
         source : .
         target : /app
     restart : always
-
 
 
 # The commented out section below is an example of how to define a PostgreSQL
