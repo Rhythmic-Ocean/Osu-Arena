@@ -18,16 +18,17 @@ from utils_v2 import (
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.voice_states = False
 
 
 class OsuArena(commands.Bot):
-    def __init__(self) -> None:
+    def __init__(self, log_handler: LogHandler) -> None:
         super().__init__(
             command_prefix=commands.when_mentioned,
             intents=intents,
             help_command=None,
         )
-        self.log_handler = LogHandler()
+        self.log_handler = log_handler
         self.logger = self.log_handler.logger
 
         self.db_handler = None
@@ -118,5 +119,6 @@ class OsuArena(commands.Bot):
 
 
 if __name__ == "__main__":
-    bot = OsuArena()
-    bot.run(ENV.DISCORD_TOKEN, log_level=logging.DEBUG)
+    log_handler = LogHandler()
+    bot = OsuArena(log_handler)
+    bot.run(ENV.DISCORD_TOKEN, log_handler=None, log_level=logging.DEBUG)

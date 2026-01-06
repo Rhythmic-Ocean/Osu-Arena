@@ -12,6 +12,7 @@
 
 - Completed code refactoring and reinitiated all previous functions.
 - New Additions:
+  - Basic sphinx docs completed for `utils/db_handler.py`
   - The project now uses docker for better stability
   - Now with persistent views, challenge requests can theoretically last indefinitely.
   - The bot now uses the Cogs model. [Learn More](https://github.com/kkrypt0nn/Python-Discord-Bot-Template)

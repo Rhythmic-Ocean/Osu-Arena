@@ -37,13 +37,17 @@ class LogHandler:
             formatter = logging.Formatter(format, "%Y-%m-%d %H:%M:%S", style="{")
             return formatter.format(record)
 
-    def __init__(self, logger_name: str = "discord_bot") -> None:
+    def __init__(self, logger_name: str = "discord") -> None:
+        self.logger_name = logger_name
         self.logger = logging.getLogger(logger_name)
         self.logger.setLevel(logging.DEBUG)
         self._setup_handlers()
         self.webhook_url = ENV.LOGS_WEBHOOK
 
     def _setup_handlers(self) -> None:
+        # cuz we don't wanna clear logger for quart one
+        if self.logger_name == "discord":
+            self.logger.handlers.clear()
         if self.logger.hasHandlers():
             return
         console_handler = logging.StreamHandler()

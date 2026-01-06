@@ -1,8 +1,6 @@
 import os
-import logging
 from quart import Quart
 
-from bot import OsuArena
 from load_env import ENV
 from utils_v2 import LogHandler
 from web_utils import HomeView, DashboardView, WebHelper
@@ -11,16 +9,12 @@ from web_utils import HomeView, DashboardView, WebHelper
 class QuartApp:
     def __init__(self):
         self.app = Quart(__name__)
-        self.setup_config()
 
         self.web_helper = None
         self.log_handler = LogHandler(logger_name="web")
+        self.app.secret_key = ENV.QUART_SECKEY
 
         self.register_routes()
-
-    def setup_config(self):
-        self.app.secret_key = ENV.QUART_SECKEY
-        logging.basicConfig(filename="web.log", level=logging.DEBUG, filemode="w")
 
     async def get_web_helper(self):
         if self.web_helper is None:
