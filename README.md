@@ -8,6 +8,12 @@
 
 ---
 
+## NOTE
+
+Right now, the web component is just a microservice for OAuth and is entirely AI generated. The final goal is to display all existing leadboards with individual player's profile but that will take some time.
+
+---
+
 ## Recent (Jan 2026)
 
 - Completed code refactoring and reinitiated all previous functions.
