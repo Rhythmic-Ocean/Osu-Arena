@@ -516,9 +516,9 @@ class Monitor(commands.Cog, name="monitor"):
 
     async def challenge_finish_point_distribution(self, winner, loser, for_pp):
         try:
-            response1 = await self.db_handler.add_points(for_pp, osu_username=winner)
+            response1 = await self.db_handler.add_points(for_pp, osu_uname=winner)
             response2 = await self.db_handler.add_points(
-                -int(round(for_pp / 2)), osu_username=loser
+                -int(round(for_pp / 2)), osu_uname=loser
             )
             if response1 and response2:
                 return True
