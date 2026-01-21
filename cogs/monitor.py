@@ -506,7 +506,7 @@ class Monitor(commands.Cog, name="monitor"):
             else:
                 try:
                     msg = await channel.fetch_message(msg_id)
-                    await msg.edit(content=content)
+                    await msg.delete(content=content)
                 except discord.NotFound:
                     await channel.send(content)
         except Exception as error:
@@ -543,7 +543,7 @@ class Monitor(commands.Cog, name="monitor"):
                 error,
             )
             return
-        channel = guild.get_channel(ENV.BOT_UPDATES)
+        channel = guild.get_channel(ENV.RIVAL_RESULTS_ID)
         try:
             if channel:
                 await channel.send(
