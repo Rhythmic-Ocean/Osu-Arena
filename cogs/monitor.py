@@ -506,7 +506,7 @@ class Monitor(commands.Cog, name="monitor"):
             else:
                 try:
                     msg = await channel.fetch_message(msg_id)
-                    await msg.delete(content=content)
+                    await msg.edit(content=content)
                 except discord.NotFound:
                     await channel.send(content)
         except Exception as error:
