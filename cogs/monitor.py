@@ -159,16 +159,6 @@ class Monitor(commands.Cog, name="monitor"):
                 if not guild:
                     await self.logger.warning("Sync Error: Guild not found.")
                     return
-                channel = guild.get_channel(ENV.BOT_UPDATES)
-
-                if channel:
-                    embed = discord.Embed(
-                        title="User Left & Data Wiped",
-                        description=f"**{user_name}** (`{discord_id}`) left the server.\nDeleted their record from `discord_osu`.",
-                        color=discord.Color.red(),
-                        timestamp=datetime.datetime.now(),
-                    )
-                    await channel.send(embed=embed)
             else:
                 await self.log_handler.report_info(
                     f"User {user_name} left, but was not in the database."
