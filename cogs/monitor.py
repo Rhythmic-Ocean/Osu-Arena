@@ -121,6 +121,18 @@ class Monitor(commands.Cog, name="monitor"):
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
+        channel = self.bot.get_channel(ENV.WELCOME_CHANNEL_ID)
+
+        if channel:
+            greeting_msg = (
+                f"Welcome to **osu!Arena**, {member.mention}! 🎉\n\n"
+                "We are an osu community based on farming and community events!\n"
+                f"Please use `/link` (via the **osu! Arena Bot**) in <#{ENV.SIGN_UP_ID}> to participate in activities.\n"
+                "You can use `/help` to see what else the bot can do.\n\n"
+                f"If you have any trouble, feel free to DM <@{ENV.RHYTHMIC_OCEAN_ID}>."
+            )
+
+            await channel.send(greeting_msg)
         role = discord.utils.get(member.guild.roles, name="Inactive")
         if role:
             await member.add_roles(role)

@@ -1,8 +1,7 @@
 from dotenv import load_dotenv
 import os
 
-
-load_dotenv(dotenv_path="local.env")
+load_dotenv(dotenv_path="sec.env")
 
 
 class ENV:
@@ -46,3 +45,7 @@ class ENV:
     REQ_ROLE_POINTS = os.getenv("REQ_ROLE_POINTS")
     # Webhook of the channel you want the bot to log errors and occasionally infos
     LOGS_WEBHOOK = os.getenv("LOGS_WEBHOOK")
+
+    WELCOME_CHANNEL_ID = int(os.getenv("WELCOME_CHANNEL_ID"))
+    SIGN_UP_ID = int(os.getenv("SIGN_UP_ID"))
+    RHYTHMIC_OCEAN_ID = int(os.getenv("RHYTHMIC_OCEAN_ID"))
