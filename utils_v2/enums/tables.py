@@ -23,8 +23,8 @@ class TablesRivals(StrEnum):
 
 
 class TablesPoints(StrEnum):
-    POINTS = "points"
-    S_POINTS = "s_points"
+    POINTS = "t_points"
+    S_POINTS = "points"
     HISTORICAL_POINTS = "historical_points"
 
 
@@ -45,7 +45,7 @@ class ArchivedTable(StrEnum):
     RANKER = "ranker"
     MASTER = "master"
     RIVALS = "rivals"
-    S_POINTS = "s_points"
+    S_POINTS = "points"
 
 
 class ShowTable(StrEnum):
@@ -59,5 +59,5 @@ class ShowTable(StrEnum):
     RANKER = "ranker"
     MASTER = "master"
     RIVALS = "rivals"
-    S_POINTS = "s_points"
-    POINTS = "points"
+    S_POINTS = "points"
+    POINTS = "t_points"
