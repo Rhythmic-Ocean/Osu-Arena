@@ -78,6 +78,8 @@ class Show(commands.Cog):
         elif league_name in [t.value for t in TablesPoints]:
             if league_name == TablesPoints.S_POINTS:
                 league_name = DiscordOsuColumn.SEASONAL_POINTS
+            elif league_name == TablesPoints.POINTS:
+                league_name = DiscordOsuColumn.POINTS
             data = await self.db_handler.get_current_points(league_name)
             if league_name == TablesPoints.POINTS:
                 title = "Universal Points"
