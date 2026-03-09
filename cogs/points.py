@@ -30,6 +30,11 @@ class Points(commands.Cog):
         self, interaction: discord.Interaction, player: discord.Member, points: int
     ):
         await interaction.response.defer()
+        if await self.db_handler.get_current_season() is None:
+            await interaction.followup.send(
+                "⚠ **Off-season:** Currently off season, this command has been disabled."
+            )
+            return
 
         response = await self.db_handler.check_player_existence_for_points(player.id)
 
