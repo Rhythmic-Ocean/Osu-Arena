@@ -63,6 +63,29 @@ class Monitor(commands.Cog, name="monitor"):
 
         guild = self.bot.guild
         channel = guild.get_channel(ENV.BOT_UPDATES)
+        if await self.db_handler.get_current_season() is None:
+            message = (
+                "⚠ **Off-season:** Currently off season, No points awarded this week."
+            )
+
+            try:
+                await channel.send(content=message)
+            except Exception as error:
+                await self.log_handler.report_error(
+                    "Monitor.weekly_point_update()",
+                    error,
+                    "Error sending message to channel.",
+                )
+            return
+
+        try:
+            await channel.send(content=message)
+        except Exception as error:
+            await self.log_handler.report_error(
+                "Monitor.weekly_point_update()",
+                error,
+                "Error sending message to channel.",
+            )
 
         for a_league in TablesLeagues:
             try:

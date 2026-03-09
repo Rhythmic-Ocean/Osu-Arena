@@ -1012,8 +1012,8 @@ class DatabaseHandler:
             )
             if response and response.data:
                 return response.data[SeasonColumn.SEASON]
-            raise Exception(
-                "Couldn't find any ongoing season. Please check the db if it doesn't sound right."
+            await self.log_handler.report_info(
+                "Couldn't find any ongoing season. Please check if it doesn't sound right!"
             )
         except Exception as error:
             await self.log_handler.report_error(
