@@ -66,6 +66,14 @@ class Show(commands.Cog):
                 ephemeral=True,
             )
             return False
+        if await self.db_handler.get_current_season() is None:
+            if league_name == ShowTable.POINTS:
+                return True
+            await interaction.followup.send(
+                "⚠ **Off-season:** Currently off season, only T_points functionaly enabled for this command.",
+                ephemeral=True,
+            )
+            return False
 
         return True
 
