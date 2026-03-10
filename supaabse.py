@@ -1,9 +1,10 @@
 import sys
 from flask import Flask
-from supabase import Client, create_client
+from supabase import create_client
 from osu import GameModeStr, UserScoreType, SoloScore
 import osu
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 from threading import Thread, Lock
 
@@ -18,16 +19,20 @@ LEAGUE_MODES = {
     sys.maxsize: "novice",
 }
 
-load_dotenv(dotenv_path="sec.env")
+BASE_DIR = Path(__file__).resolve().parent
+dotenv_path = BASE_DIR / "local.env"
+
+load_dotenv(dotenv_path=dotenv_path)
 update_lock = Lock()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 redirect_url = "http://127.0.0.1:8080"  # not used directly, fine to keep
 
-OSU_CLIENT_ID = os.getenv("OSU_CLIENT2_ID")
+OSU_CLIENT_ID = os.getenv("OSU_CLIENT_ID")
+
 OSU_CLIENT_SECRET = os.getenv("OSU_CLIENT2_SECRET")
 
 client_updater = osu.Client.from_credentials(

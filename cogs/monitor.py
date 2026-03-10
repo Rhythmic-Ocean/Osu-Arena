@@ -646,7 +646,7 @@ class Monitor(commands.Cog, name="monitor"):
         return True
 
     def calcuate_points(self, prev_top_pp, current_top_pp, league):
-        diff = current_top_pp - prev_top_pp
+        diff = 5 * (current_top_pp - prev_top_pp)
         match league:
             case TablesLeagues.NOVICE:
                 return diff * 0.80
