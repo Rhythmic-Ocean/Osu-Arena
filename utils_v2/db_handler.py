@@ -201,6 +201,9 @@ class DatabaseHandler:
             DiscordOsuColumn.OSU_USERNAME,
             DiscordOsuColumn.OSU_ID,
             DiscordOsuColumn.TOP_PLAY_ID,
+            DiscordOsuColumn.TOP_PLAY_PP,
+            DiscordOsuColumn.PREV_TOP_PP,
+            DiscordOsuColumn.LEAGUE,
         ]
         try:
             response = (

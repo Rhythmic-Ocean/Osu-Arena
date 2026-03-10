@@ -45,6 +45,7 @@ class DiscordOsuColumn(StrEnum):
     NEW_PLAYER_ANNOUNCE = "new_player_announce"
     POINTS = "points"
     SEASONAL_POINTS = "seasonal_points"
+    PREV_TOP_PP = "prev_top_pp"
 
 
 class DiscordOsuData(TypedDict):

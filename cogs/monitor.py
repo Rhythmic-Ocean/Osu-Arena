@@ -271,11 +271,33 @@ class Monitor(commands.Cog, name="monitor"):
                     return
 
                 for play in top_plays:
+                    discord_id = play[DiscordOsuColumn.DISCORD_ID]
+                    top_play_id = play[DiscordOsuColumn.TOP_PLAY_ID]
+                    prev_top_pp = play[DiscordOsuColumn.PREV_TOP_PP]
+                    top_play_pp = play[DiscordOsuColumn.TOP_PLAY_PP]
+                    current_league = play[DiscordOsuColumn.LEAGUE]
+                    points_earned = int(
+                        self.calcuate_points(prev_top_pp, top_play_pp, current_league)
+                    )
+                    if (
+                        await self.db_handler.add_points(points_earned, discord_id)
+                        is False
+                    ):
+                        error = Exception(
+                            f"Unsuccessful to add calcuated points amount {points_earned} for player <@{discord_id}> earned through top play!"
+                        )
+                        points_earned = None
+                        await self.log_handler.report_error(
+                            "Monitor.monitor_top_plays() loop",
+                            error,
+                            f"Error for top_play: {top_play_id}, error announcing for <@{discord_id}>",
+                        )
+
                     for tries in range(MAX_TRIES):
                         try:
-                            discord_id = play[DiscordOsuColumn.DISCORD_ID]
-                            top_play_id = play[DiscordOsuColumn.TOP_PLAY_ID]
-                            await self.announce_new_top_play(top_play_id, discord_id)
+                            await self.announce_new_top_play(
+                                top_play_id, discord_id, points_earned
+                            )
                             if not await self.db_handler.negate_top_play(discord_id):
                                 raise Exception(
                                     f"Top play negation failed! Got False for <@{discord_id}>"
@@ -404,11 +426,15 @@ class Monitor(commands.Cog, name="monitor"):
                 f"Could not announce <@{discord_id}>'s arrival!",
             )
 
-    async def announce_new_top_play(self, top_play_id: int, discord_id: int):
+    async def announce_new_top_play(
+        self, top_play_id: int, discord_id: int, points_earned: int | None
+    ):
         top_play = await self.osu_client.get_score_by_id_only(top_play_id)
         embed = await self.renderer.score.render(top_play)
         content_str = (
-            f"New Top Play from <@{discord_id}>!" if discord_id else "New Top Play!"
+            f"New Top Play from <@{discord_id}>! Points earned : {points_earned}"
+            if points_earned is not None
+            else f"New Top Play from <@{discord_id}>! Error adding points! Please inform the mods."
         )
         guild = self.bot.guild
         if not guild:
@@ -422,6 +448,9 @@ class Monitor(commands.Cog, name="monitor"):
         try:
             if channel:
                 await channel.send(content=content_str, embed=embed)
+            if await self.db_handler.get_current_season() is None:
+                added_content = "[⚠ **NOTE:** Currently off season. The points earned above DOES NOT contribute towards seasonal points.]"
+                await channel.send(content=added_content)
             else:
                 raise Exception(
                     f"Could not find top play channel. Failed to announce top play for <@{discord_id}>"
@@ -615,6 +644,27 @@ class Monitor(commands.Cog, name="monitor"):
             except discord.NotFound:
                 await channel.send(content=new_content)
         return True
+
+    def calcuate_points(self, prev_top_pp, current_top_pp, league):
+        diff = current_top_pp - prev_top_pp
+        match league:
+            case TablesLeagues.NOVICE:
+                return diff * 0.80
+            case TablesLeagues.BRONZE:
+                return diff * 0.85
+            case TablesLeagues.SILVER:
+                return diff * 0.90
+            case TablesLeagues.GOLD:
+                return diff * 0.96
+            case TablesLeagues.PLATINUM:
+                return diff * 1
+            case TablesLeagues.DIAMOND:
+                return diff * 1.05
+            case TablesLeagues.ELITE:
+                return diff * 1.10
+            case TablesLeagues.MASTER:
+                return diff * 1.20
+        return 0
 
 
 async def setup(bot: OsuArena):

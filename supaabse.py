@@ -1,14 +1,22 @@
+import sys
 from flask import Flask
 from supabase import Client, create_client
+from osu import GameModeStr, UserScoreType, SoloScore
 import osu
-from osu import Scope, GameModeStr, Client, UserScoreType, SoloScore
-from osu.objects import LegacyScore
 import os
 from dotenv import load_dotenv
-from web import LEAGUE_MODES
 from threading import Thread, Lock
-import pprint
 
+LEAGUE_MODES = {
+    1000: "master",
+    3000: "elite",
+    10000: "diamond",
+    30000: "platinum",
+    80000: "gold",
+    150000: "silver",
+    250000: "bronze",
+    sys.maxsize: "novice",
+}
 
 load_dotenv(dotenv_path="sec.env")
 update_lock = Lock()
@@ -22,7 +30,9 @@ redirect_url = "http://127.0.0.1:8080"  # not used directly, fine to keep
 OSU_CLIENT_ID = os.getenv("OSU_CLIENT2_ID")
 OSU_CLIENT_SECRET = os.getenv("OSU_CLIENT2_SECRET")
 
-client_updater = Client.from_credentials(OSU_CLIENT_ID, OSU_CLIENT_SECRET, redirect_url)
+client_updater = osu.Client.from_credentials(
+    OSU_CLIENT_ID, OSU_CLIENT_SECRET, redirect_url
+)
 
 app = Flask(__name__)
 
@@ -48,11 +58,11 @@ def get_top_play(osu_id):
     if osu_id:
         try:
             top_scores = client_updater.get_user_scores(
-                osu_id, UserScoreType.BEST, limit=1
+                osu_id, UserScoreType.BEST, mode=GameModeStr.STANDARD, limit=1
             )
             if not top_scores:
                 return
-            for i, score in enumerate(top_scores):
+            for _, score in enumerate(top_scores):
                 print(f"Type of 'score' is: {type(score)}")
                 if isinstance(score, SoloScore):
                     return (score.beatmapset.title, score.ended_at, score.pp, score.id)
@@ -99,7 +109,7 @@ def update_scores(data, osu_id):
         print(f"Failed to update {osu_id}: {e}")
 
 
-def update_top_plays(top_play_data, osu_id, announce_bool):
+def update_top_plays(top_play_data, osu_id, top_play_pp, announce_bool):
     title, date, p_points, score_id = top_play_data
     formatted_date = date.isoformat()
     update_payload = {
@@ -107,6 +117,7 @@ def update_top_plays(top_play_data, osu_id, announce_bool):
         "top_play_pp": int(p_points) if p_points else 0,
         "top_play_date": formatted_date,
         "top_play_id": score_id,
+        "prev_top_pp": top_play_pp,
     }
 
     if announce_bool:
@@ -124,7 +135,7 @@ def update_top_plays(top_play_data, osu_id, announce_bool):
 def update_player():
     response = (
         supabase.table("discord_osu")
-        .select("osu_id, top_play_id, current_pp, ii")
+        .select("osu_id, top_play_id, top_play_pp, current_pp, ii")
         .execute()
     )
     if not response.data:
@@ -136,6 +147,7 @@ def update_player():
     for user in users:
         osu_id = user.get("osu_id")
         top_play_id = user.get("top_play_id")
+        top_play_pp = user.get("top_play_pp")
         current_pp = user.get("current_pp")
         current_ii = user.get("ii", 0)
 
@@ -143,19 +155,19 @@ def update_player():
         top_play_data = get_top_play(osu_id)
 
         if data is not None:
-            username, rank, pp, ii = data
+            _, _, pp, ii = data
             if current_pp != pp or current_ii != ii:
                 update_scores(data, osu_id)
             else:
                 print(f"Same pp for {osu_id}")
 
         if top_play_data is not None:
-            title, date, p_points, score_id = top_play_data
+            _, _, _, score_id = top_play_data
             if score_id != top_play_id:
-                if top_play_id == None:  # first time player so no announcement
-                    update_top_plays(top_play_data, osu_id, False)
+                if top_play_id is None:  # first time player so no announcement
+                    update_top_plays(top_play_data, osu_id, top_play_pp, False)
                 else:
-                    update_top_plays(top_play_data, osu_id, True)
+                    update_top_plays(top_play_data, osu_id, top_play_pp, True)
             else:
                 print(f"Same top score for {osu_id}")
 
