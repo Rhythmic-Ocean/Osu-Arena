@@ -73,6 +73,7 @@ class Show(commands.Cog):
                 "⚠ **Off-season:** Currently off season, only T_points functionaly enabled for this command.",
                 ephemeral=True,
             )
+            return False
 
         return True
 
