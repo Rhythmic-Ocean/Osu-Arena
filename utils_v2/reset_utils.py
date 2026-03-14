@@ -15,20 +15,18 @@ class ResetConfirmView(discord.ui.View):
             return False
         return True
 
-    @discord.ui.button(
-        label="Yes, Restart the season.", style=discord.ButtonStyle.green
-    )
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.green)
     async def confirm(
         self, interaction: discord.Interaction, button: discord.ui.Button
     ):
         self.value = True
         await interaction.response.defer()
         await interaction.edit_original_response(
-            content="✅ Confirmation received. Starting restart sequence...", view=None
+            content="✅ Confirmation received.", view=None
         )
         self.stop()
 
-    @discord.ui.button(label="Cancel restart.", style=discord.ButtonStyle.red)
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.red)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.value = False
         await interaction.response.defer()

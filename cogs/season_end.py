@@ -3,18 +3,17 @@ from __future__ import annotations
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 from load_env import ENV
 from utils_v2.enums.status import FuncStatus
 from utils_v2.enums.tables import TablesLeagues
-from utils_v2.enums.tables_internals import DiscordOsuColumn
 from utils_v2 import ResetConfirmView
 
 if TYPE_CHECKING:
     from bot import OsuArena
 
 
-class SeasonManagement(commands.Cog):
+class SeasonEnd(commands.Cog):
     GUILD = discord.Object(ENV.OSU_ARENA)
 
     def __init__(self, bot: OsuArena):
@@ -23,12 +22,12 @@ class SeasonManagement(commands.Cog):
         self.log_handler = self.bot.log_handler
 
     @app_commands.command(
-        name="season_restart",
+        name="season_end",
         description="End current season with backups (Admin Only)",
     )
     @app_commands.guilds(GUILD)
     @app_commands.checks.has_any_role(ENV.REQ_ROLE)
-    async def season_restart(self, interaction: discord.Interaction):
+    async def season_end(self, interaction: discord.Interaction):
         if not await self._get_confirmation(interaction):
             return
 
@@ -43,13 +42,23 @@ class SeasonManagement(commands.Cog):
             if not await self._step_backup_points(interaction, current_season):
                 return
 
-            if not await self._step_reset_points(interaction):
-                return
-
             if not await self._step_backup_leagues(interaction, current_season):
                 return
+            await interaction.followup.send(
+                "**Success!** All tables have been archived, use /archive command to see the final result.\n"
+                f"🏁**Season {current_season}** has ended!"
+            )
 
-            await self._step_migrate_roles(interaction)
+            guild = self.bot.guild
+            channel = guild.get_channel(ENV.BOT_UPDATES)
+            try:
+                await channel.send(
+                    f"🏁 **Season {current_season}** has ended! The final table for this season has being archived. 📜"
+                )
+            except Exception as e:
+                await self.log_handler.report_error(
+                    "Failed announcement for season end!", e
+                )
 
         except Exception as e:
             await self.log_handler.report_error("Season Restart Critical Failure", e)
@@ -65,7 +74,6 @@ class SeasonManagement(commands.Cog):
             content=(
                 "⚠️ **WARNING** ⚠️\n"
                 "You are about to **END THE CURRENT SEASON**.\n"
-                "This will archive data, reset points, and move players.\n\n"
                 "Are you sure you want to proceed?"
             ),
             view=view,
@@ -90,7 +98,7 @@ class SeasonManagement(commands.Cog):
         current = await self.db_handler.get_current_season()
         if not current:
             await interaction.followup.send(
-                "❌ No ongoing season found. Restart Cancelled"
+                "❌ No ongoing season found. Season Close Cancelled"
             )
             return None
 
@@ -142,28 +150,10 @@ class SeasonManagement(commands.Cog):
             await interaction.followup.send(f"❌ Error backing up points: {e}")
             return False
 
-    async def _step_reset_points(self, interaction: discord.Interaction) -> bool:
-        """Phase 4: Reset points for the new season."""
-        await interaction.followup.send("⏳ Resetting seasonal points...")
-        try:
-            response = await self.db_handler.reset_seasonal_points()
-            if response is FuncStatus.GOOD:
-                await interaction.followup.send("✅ Seasonal points reset.")
-                return True
-            raise Exception(
-                "Error at phase 4. Got error response from reset_seasonal_points()"
-            )
-        except Exception as e:
-            await self.log_handler.report_error(
-                "SeasonManagement._step_reset_points", e
-            )
-            await interaction.followup.send(f"❌ Error resetting points: {e}")
-            return False
-
     async def _step_backup_leagues(
         self, interaction: discord.Interaction, season: str
     ) -> bool:
-        """Phase 5: Duplicate league tables and re-initiate."""
+        """Phase 4: Duplicate league tables."""
         for league in [leag for leag in TablesLeagues]:
             msg = await interaction.followup.send(
                 f"⏳ Processing **{league} League**..."
@@ -174,97 +164,11 @@ class SeasonManagement(commands.Cog):
                     content=f"❌ Error duplicating {league}. Stopped at {league}_{season}."
                 )
                 return False
-            response2 = await self.db_handler.update_init_pp(league)
-            if response2 == FuncStatus.ERROR:
-                await msg.edit(content=f"❌ Error initializing pp for {league}")
-                return False
-            await msg.edit(
-                content=f"✅ **{league.capitalize()} League**: Backed up & Season Reinitiated."
-            )
+            await msg.edit(content=f"✅ **{league.capitalize()} League**: Backed up")
 
         return True
 
-    async def _step_migrate_roles(self, interaction: discord.Interaction):
-        """Phase 6: Move players to their new leagues based on DB stats."""
-        await interaction.followup.send("⏳ Starting Player Role Migration...")
-
-        try:
-            players_data = await self.db_handler.update_leagues()
-
-            await self._process_role_changes(interaction, players_data)
-
-            await interaction.followup.send(
-                "🎉 **Success!** All players reassigned.\n"
-                "🏆 Good luck to all players in the new season!"
-            )
-        except Exception as e:
-            await self.log_handler.report_error(
-                "SeasonManagement._step_migrate_roles()", e
-            )
-            await interaction.followup.send(
-                "❌ Critical Error updating leagues. Please refer to log."
-            )
-
-    async def _process_role_changes(
-        self, interaction: discord.Interaction, players_data: list[dict[str, Any]]
-    ):
-        guild = interaction.guild
-        role_cache = {role.name: role for role in guild.roles}
-
-        for player_record in players_data:
-            discord_id = int(player_record[DiscordOsuColumn.DISCORD_ID])
-            member = guild.get_member(discord_id)
-
-            if not member:
-                await interaction.followup.send(
-                    f"⚠️ User not found in server: <@{discord_id}>"
-                )
-                continue
-
-            new_league_name = player_record[DiscordOsuColumn.FUTURE_LEAGUE].capitalize()
-            old_league_name = player_record[DiscordOsuColumn.LEAGUE].capitalize()
-
-            new_role = role_cache.get(new_league_name)
-            old_role = role_cache.get(old_league_name)
-
-            if not new_role or not old_role:
-                await interaction.followup.send(
-                    f"⚠️ Role missing: {old_league_name} -> {new_league_name}"
-                )
-                continue
-
-            if new_role in member.roles and old_role not in member.roles:
-                await interaction.followup.send(
-                    f"Appropriate roles has already been assigned to <@{member.id}>. Skipping..."
-                )
-                continue
-
-            try:
-                await member.remove_roles(old_role)
-                await member.add_roles(new_role)
-                await interaction.followup.send(
-                    f"🔄 <@{member.id}>: {old_league_name} ➡️ {new_league_name}"
-                )
-            except discord.Forbidden:
-                await interaction.followup.send(
-                    f"❌ Permission denied modifying role for <@{member.id}> from {old_league_name} to {new_league_name}. Please perform this action manually"
-                )
-                await self.log_handler.report_error(
-                    "SeasonManagement._process_role_changes()",
-                    discord.Forbidden,
-                    f"Permission denied for role change of <@{member.id}> from {old_league_name} to {new_league_name}. Please perform this action manually",
-                )
-            except Exception as error:
-                await interaction.followup.send(
-                    f"❌ Failed to move <@{member.id}>: from {old_league_name} to {new_league_name}. Please perform this action manually"
-                )
-                await self.log_handler.report_error(
-                    "SeasonManagement._process_role_changes()",
-                    error,
-                    f"Failed to move <@{member.id}>'s roles from {old_league_name} to {new_league_name}. An unexpected exception occured. Please perform this action manually",
-                )
-
-    @season_restart.error
+    @season_end.error
     async def session_restart_error(self, interaction: discord.Interaction, error):
         if isinstance(error, app_commands.MissingAnyRole):
             await interaction.response.send_message(
@@ -281,4 +185,4 @@ class SeasonManagement(commands.Cog):
 
 
 async def setup(bot: OsuArena):
-    await bot.add_cog(SeasonManagement(bot))
+    await bot.add_cog(SeasonEnd(bot))
