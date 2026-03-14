@@ -91,8 +91,14 @@ class PlayerManagement(commands.Cog):
         )
 
         embed.add_field(
-            name="🛠️ /session_restart",
-            value="**(Admin Only)** Reset the current session, create backups, and reassign users to leagues.",
+            name="🛠️ /session_start",
+            value="**(Admin Only)** Start a new season and reassign users to leagues based on their current pp.",
+            inline=False,
+        )
+
+        embed.add_field(
+            name="🛠️ /session_end",
+            value="**(Admin Only)** Ends current season and archive it.",
             inline=False,
         )
 

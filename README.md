@@ -14,6 +14,14 @@ Right now, the web component is just a microservice for OAuth and is entirely AI
 
 ---
 
+## Recent (Mar 2026)
+
+- Made `/show` command only partially functional during off-season.
+- `/season_restart` refactored into two commands `/season_start` and `season_end`
+- partially complete documentation of `utils_v2/db_handler.py`.
+
+---
+
 ## Recent (Jan 2026)
 
 - Completed code refactoring and reinitiated all previous functions.
@@ -37,7 +45,7 @@ Right now, the web component is just a microservice for OAuth and is entirely AI
 ## TODO
 
 - Refactor the `supabase.py` cronjob (and rename it) to better align with the rest of the project's architecture.
-- Documentation (specifically for `utils_v2/db_handler.py`).
+- Complete documentation (specifically for `utils_v2/db_handler.py`).
 
 ---
 
@@ -47,7 +55,7 @@ Right now, the web component is just a microservice for OAuth and is entirely AI
 - **League System** – Automatically assigns users into leagues (Bronze → Master) based on osu! rank.
 - **Rivalry & Challenge System** – Issue & manage direct 1v1 challenges with real-time updates.
 - **Live PP & Rank Updates** – Every player’s rank & pp is updated constantly in the database.
-- **Session Resets** – Admins can restart sessions to reassign league brackets.
+- **Session Start/End** – Admins can start/end sessions to reassign league brackets.
 - **Archived Seasons & Challenges** – Access previous seasons and completed rivalries via `/archived` command.
 - **Winner Announcements** – Rivalry winners are automatically detected and announced.
 - **Asynchronous Architecture** – Uses `asyncio` and parallel modules for optimal performance.
@@ -129,9 +137,15 @@ Example:
 
 ---
 
-### `/session_restart`
+### `/session_start`
 
-Admin-only command to reset the current session, create backups and reassign users to leagues.
+Admin-only command to start a new season and reassign users to leagues based on their current pp.
+
+---
+
+### `/session_end`
+
+Admin-only command to ends current season and archive it.
 
 ---
 
@@ -155,7 +169,8 @@ Effects both seasonal and universal points
 │   ├── player_mgmt.py
 │   ├── points.py
 │   ├── revoke.py
-│   ├── season_restart.py
+│   ├── season_start.py
+│   ├── season_end.py
 │   └── show.py
 ├── compose.yaml
 ├── Dockerfile
