@@ -32,8 +32,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 redirect_url = "http://127.0.0.1:8080"  # not used directly, fine to keep
 
 OSU_CLIENT_ID = os.getenv("OSU_CLIENT_ID")
-
-OSU_CLIENT_SECRET = os.getenv("OSU_CLIENT2_SECRET")
+OSU_CLIENT_SECRET = os.getenv("OSU_CLIENT_SECRET")
 
 client_updater = osu.Client.from_credentials(
     OSU_CLIENT_ID, OSU_CLIENT_SECRET, redirect_url
@@ -189,7 +188,7 @@ def handle_update():
             update_player()
 
     if update_lock.locked():
-        return "Update already in progress.", 429
+        return "Update already in progress.", 202
 
     Thread(target=run_update).start()
     return "Update started in background.", 200

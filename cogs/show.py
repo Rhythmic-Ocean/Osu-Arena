@@ -67,10 +67,10 @@ class Show(commands.Cog):
             )
             return False
         if await self.db_handler.get_current_season() is None:
-            if league_name == ShowTable.POINTS:
+            if league_name == ShowTable.POINTS or league_name == ShowTable.RIVALS:
                 return True
             await interaction.followup.send(
-                "⚠ **Off-season:** Currently off season, only T_points functionaly enabled for this command.",
+                "⚠ **Off-season:** Currently off season, only T_points and Rivals functionaly enabled for this command.",
                 ephemeral=True,
             )
             return False

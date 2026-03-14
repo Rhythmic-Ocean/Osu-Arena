@@ -1018,6 +1018,7 @@ class DatabaseHandler:
             await self.log_handler.report_info(
                 "Couldn't find any ongoing season. Please check if it doesn't sound right!"
             )
+            return None
         except Exception as error:
             await self.log_handler.report_error(
                 "DatabaseHandler.get_current_season()",
@@ -1844,5 +1845,28 @@ class DatabaseHandler:
         except Exception as error:
             await self.log_handler.report_error(
                 "DatabaseHandler._get_player_from_league()", error
+            )
+            return FuncStatus.ERROR
+
+    async def add_new_season(self) -> int | FuncStatus:
+        last_seasons = await self.get_archived_season()
+        last_season = max(last_seasons)
+        current_season = last_season + 1
+        try:
+            await (
+                self.supabase_client.table(TableMiscellaneous.SEASONS)
+                .insert(
+                    {
+                        SeasonColumn.ID: current_season,
+                        SeasonColumn.SEASON: current_season,
+                        SeasonColumn.STATUS: SeasonStatus.ONGOING,
+                    }
+                )
+                .execute()
+            )
+            return current_season
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler.add_new_season()", error
             )
             return FuncStatus.ERROR
