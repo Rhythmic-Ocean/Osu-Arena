@@ -6,6 +6,7 @@ Common class for both the website and the bot for database access
 from __future__ import annotations
 import datetime
 from typing import Any
+from aiohttp.connector import NamedPipeConnector
 import discord
 from supabase import AsyncClient
 
@@ -1765,6 +1766,9 @@ class DatabaseHandler:
         if not await self._insert_into_new_league(data, future_league):
             return None
 
+        if not await self._delete_from_old_league(discord_id, league):
+            return None
+
         if not await self._update_discord_osu_ref(league, future_league, discord_id):
             return None
 
@@ -1796,6 +1800,23 @@ class DatabaseHandler:
                 "DatabaseHandler._insert_into_new_league()",
                 error,
                 f"Failed putting <@{data[DiscordOsuColumn.DISCORD_ID]}> into {future_league}",
+            )
+            return False
+
+    async def _delete_from_old_league(self, discord_id: str, league: str) -> bool:
+        try:
+            await (
+                self.supabase_client.table(league)
+                .delete()
+                .eq(LeagueColumn.DISCORD_ID, discord_id)
+                .execute()
+            )
+            return True
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler._insert_into_new_league()",
+                error,
+                f"Failed removing <@{discord_id}> from {league}.",
             )
             return False
 

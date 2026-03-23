@@ -78,15 +78,6 @@ class Monitor(commands.Cog, name="monitor"):
                 )
             return
 
-        try:
-            await channel.send(content=message)
-        except Exception as error:
-            await self.log_handler.report_error(
-                "Monitor.weekly_point_update()",
-                error,
-                "Error sending message to channel.",
-            )
-
         for a_league in TablesLeagues:
             try:
                 await self.supabase_client.rpc(
@@ -451,10 +442,6 @@ class Monitor(commands.Cog, name="monitor"):
             if await self.db_handler.get_current_season() is None:
                 added_content = "[⚠ **NOTE:** Currently off season. The points earned above DOES NOT contribute towards seasonal points.]"
                 await channel.send(content=added_content)
-            else:
-                raise Exception(
-                    f"Could not find top play channel. Failed to announce top play for <@{discord_id}>"
-                )
         except Exception as error:
             await self.log_handler.report_error(
                 "Monitor.announce_new_top_play()", error
