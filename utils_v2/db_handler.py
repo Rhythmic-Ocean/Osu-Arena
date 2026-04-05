@@ -6,7 +6,6 @@ Common class for both the website and the bot for database access
 from __future__ import annotations
 import datetime
 from typing import Any
-from aiohttp.connector import NamedPipeConnector
 import discord
 from supabase import AsyncClient
 
@@ -1413,18 +1412,8 @@ class DatabaseHandler:
 
     async def get_player(self, discord_id: int) -> dict[str, Any] | None | FuncStatus:
         """|coro|
-        Retrieves a user's osu_username, initial_pp and their current_league
-        based on their discord_id. This is to display them on /dashboard in the
-        web.
-
-        This is a two-step process:
-
-        1. Fetches basic info (username, pp(this one's useless, wanna remove it but
-        don't wanna break anything just in case), league) from the discord_osu table.
-        2. Calls :meth:`_get_player_from_league` to fetch rank and stats from the
-        specific league table (e.g., "gold" or "silver").
-
-        Accesses tables : discord_osu , f"{TableLeague.(any)}"
+        Retrieves a user's full profile including stats from both the main
+        'discord_osu' table and their specific league table.
 
         Parameters
         -----------
@@ -1442,6 +1431,13 @@ class DatabaseHandler:
             DiscordOsuColumn.OSU_USERNAME,
             DiscordOsuColumn.CURRENT_PP,
             DiscordOsuColumn.LEAGUE,
+            DiscordOsuColumn.POINTS,
+            DiscordOsuColumn.SEASONAL_POINTS,
+            DiscordOsuColumn.GLOBAL_RANK,
+            DiscordOsuColumn.TOP_PLAY_MAP,
+            DiscordOsuColumn.TOP_PLAY_PP,
+            DiscordOsuColumn.II,
+            DiscordOsuColumn.OSU_ID,
         ]
         try:
             response = (
@@ -1453,11 +1449,47 @@ class DatabaseHandler:
             )
 
             if response and response.data:
-                return await self._get_player_from_league(
-                    response.data[DiscordOsuColumn.LEAGUE],
+                league_name = response.data[DiscordOsuColumn.LEAGUE]
+                # Sync the league table to ensure latest rankings/pp_change
+                try:
+                    await self.supabase_client.rpc(
+                        "sync_table_pp", {"tbl_name": league_name}
+                    ).execute()
+                except Exception as sync_error:
+                    await self.log_handler.report_error(
+                        f"DatabaseHandler.get_player(sync_table_pp={league_name})",
+                        sync_error,
+                        "Failed to sync PP values during profile fetch.",
+                    )
+
+                league_data = await self._get_player_from_league(
+                    league_name,
                     discord_id,
                     response.data[DiscordOsuColumn.OSU_USERNAME],
                 )
+
+                if isinstance(league_data, dict):
+                    # Merge data from both tables
+                    profile_data = response.data.copy()
+                    profile_data.update(league_data)
+
+                    # Get rankings
+                    profile_data["league_rank"] = await self.get_league_rank(
+                        response.data[DiscordOsuColumn.LEAGUE],
+                        league_data[LeagueColumn.PP_CHANGE],
+                    )
+                    profile_data["points_rank"] = await self.get_seasonal_points_rank(
+                        response.data[DiscordOsuColumn.SEASONAL_POINTS]
+                    )
+                    profile_data[
+                        "universal_points_rank"
+                    ] = await self.get_universal_points_rank(
+                        response.data[DiscordOsuColumn.POINTS]
+                    )
+
+                    return profile_data
+
+                return league_data
 
             return None
 
@@ -1504,6 +1536,92 @@ class DatabaseHandler:
                 error,
                 f"Error checking for <@{discord_id}>.",
             )
+
+    async def get_league_rank(self, league_table: str, pp_change: int) -> int:
+        """|coro|
+        Calculates the player's rank within their league based on pp_change.
+
+        Parameters
+        -----------
+        league_table : :class:`str`
+            The name of the league table (e.g., 'gold', 'silver').
+        pp_change : :class:`int`
+            The player's current seasonal pp_change.
+
+        Returns
+        -----------
+        :class:`int`
+            The 1-based rank (e.g., 1 for top, 2 for second).
+        """
+        try:
+            response = await (
+                self.supabase_client.table(league_table)
+                .select("*", count="exact", head=True)
+                .gt(LeagueColumn.PP_CHANGE, pp_change)
+                .execute()
+            )
+            return (response.count if response.count is not None else 0) + 1
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler.get_league_rank()", error
+            )
+            return 0
+
+    async def get_seasonal_points_rank(self, seasonal_points: int) -> int:
+        """|coro|
+        Calculates the player's rank across all players based on seasonal_points.
+
+        Parameters
+        -----------
+        seasonal_points : :class:`int`
+            The player's current seasonal points.
+
+        Returns
+        -----------
+        :class:`int`
+            The 1-based rank (e.g., 1 for top, 2 for second).
+        """
+        try:
+            response = await (
+                self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                .select("*", count="exact", head=True)
+                .gt(DiscordOsuColumn.SEASONAL_POINTS, seasonal_points)
+                .execute()
+            )
+            return (response.count if response.count is not None else 0) + 1
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler.get_seasonal_points_rank()", error
+            )
+            return 0
+
+    async def get_universal_points_rank(self, points: int) -> int:
+        """|coro|
+        Calculates the player's rank across all players based on total points.
+
+        Parameters
+        -----------
+        points : :class:`int`
+            The player's current total (universal) points.
+
+        Returns
+        -----------
+        :class:`int`
+            The 1-based rank (e.g., 1 for top, 2 for second).
+        """
+        try:
+            response = await (
+                self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                .select("*", count="exact", head=True)
+                .gt(DiscordOsuColumn.POINTS, points)
+                .execute()
+            )
+            return (response.count if response.count is not None else 0) + 1
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler.get_universal_points_rank()", error
+            )
+            return 0
 
     async def get_active_challenges(
         self, discord_id: int, osu_username: str
@@ -1560,6 +1678,54 @@ class DatabaseHandler:
             )
             return FuncStatus.ERROR
 
+    async def get_win_loss(self, osu_username: str) -> dict[str, int]:
+        """|coro|
+        Calculates the win-loss record for a player.
+
+        This counts both wins and losses in the rivals table where the
+        challenge status is 'finished'.
+
+        Parameters
+        -----------
+        osu_username : :class:`str`
+            The user's osu! username.
+
+        Returns
+        -----------
+        :class:`dict`[:class:`str`, :class:`int`]
+            A dictionary with 'wins' and 'losses' keys.
+        """
+        # Quoting is required because osu! usernames can have spaces.
+        quoted_username = f'"{osu_username}"'
+        try:
+            # Count wins
+            wins_response = await (
+                self.supabase_client.table(TablesRivals.RIVALS)
+                .select("*", count="exact", head=True)
+                .eq(RivalsColumn.WINNER, osu_username)
+                .execute()
+            )
+
+            # Count total finished games
+            total_response = await (
+                self.supabase_client.table(TablesRivals.RIVALS)
+                .select("*", count="exact", head=True)
+                .eq(RivalsColumn.CHALLENGE_STATUS, ChallengeStatus.FINISHED)
+                .or_(
+                    f"{RivalsColumn.CHALLENGER}.eq.{quoted_username}, {RivalsColumn.CHALLENGED}.eq.{quoted_username}"
+                )
+                .execute()
+            )
+
+            wins = wins_response.count if wins_response.count is not None else 0
+            total = total_response.count if total_response.count is not None else 0
+
+            return {"wins": wins, "losses": total - wins}
+
+        except Exception as error:
+            await self.log_handler.report_error("DatabaseHandler.get_win_loss()", error)
+            return {"wins": 0, "losses": 0}
+
     # ------------------------------------------------------------------------------
     # Internal / Helper Methods
     # ------------------------------------------------------------------------------
@@ -1568,6 +1734,19 @@ class DatabaseHandler:
     # So if you are gonna use them,
 
     async def _id_from_osu(self, osu_username: str):
+        """|coro|
+        Fetches the Discord ID from the database using an osu! username.
+
+        Parameters
+        -----------
+        osu_username : :class:`str`
+            The user's osu! username.
+
+        Returns
+        -----------
+        :class:`PostgrestResponse`
+            The response from the database.
+        """
         return (
             await self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
             .select(DiscordOsuColumn.DISCORD_ID)
@@ -1576,6 +1755,19 @@ class DatabaseHandler:
         )
 
     async def _id_from_discord(self, discord_username: str):
+        """|coro|
+        Fetches the Discord ID from the database using a Discord username.
+
+        Parameters
+        -----------
+        discord_username : :class:`str`
+            The user's Discord username.
+
+        Returns
+        -----------
+        :class:`PostgrestResponse`
+            The response from the database.
+        """
         return (
             await self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
             .select(DiscordOsuColumn.DISCORD_ID)
@@ -1584,6 +1776,19 @@ class DatabaseHandler:
         )
 
     async def _osu_from_id(self, discord_id: int):
+        """|coro|
+        Fetches the osu! username from the database using a Discord ID.
+
+        Parameters
+        -----------
+        discord_id : :class:`int`
+            The user's Discord ID.
+
+        Returns
+        -----------
+        :class:`PostgrestResponse`
+            The response from the database.
+        """
         return (
             await self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
             .select(DiscordOsuColumn.OSU_USERNAME)
@@ -1594,6 +1799,19 @@ class DatabaseHandler:
     async def _arrange_table(
         self, data: list[dict[str, Any]]
     ) -> tuple[list[str], list[tuple[Any]]]:
+        """|coro|
+        Converts a list of dictionaries into a tuple of headers and rows.
+
+        Parameters
+        -----------
+        data : :class:`list`[:class:`dict`[:class:`str`, :class:`Any`]]
+            The raw data to format.
+
+        Returns
+        -----------
+        :class:`tuple`[:class:`list`[:class:`str`], :class:`list`[:class:`tuple`[:class:`Any`]]]
+            A tuple containing (headers, rows).
+        """
         if not data:
             return [], []
         headers = list(data[0].keys())
@@ -1603,6 +1821,19 @@ class DatabaseHandler:
     async def _fetch_league_data(
         self, table_name: str
     ) -> tuple[list[str], list[tuple[Any]]]:
+        """|coro|
+        Fetches league-specific data from the database.
+
+        Parameters
+        -----------
+        table_name : :class:`str`
+            The name of the league table to fetch data from.
+
+        Returns
+        -----------
+        :class:`tuple`[:class:`list`[:class:`str`], :class:`list`[:class:`tuple`[:class:`Any`]]]
+            A tuple containing (headers, rows).
+        """
         query_selector = ", ".join(
             [
                 LeagueColumn.OSU_USERNAME,
@@ -1629,6 +1860,21 @@ class DatabaseHandler:
             return [], []
 
     async def _check_in_challenge_tble(self, discord_id: int, tble_type: str):
+        """|coro|
+        Checks how many unfinished challenges a user is involved in for a specific table type.
+
+        Parameters
+        -----------
+        discord_id : :class:`int`
+            The user's Discord ID.
+        tble_type : :class:`str`
+            The challenge table to check (challenger or challenged).
+
+        Returns
+        -----------
+        :class:`int` | None
+            The count of challenges or None on failure.
+        """
         query_eq = ".".join([TablesRivals.RIVALS, RivalsColumn.CHALLENGE_STATUS])
         query_selector = f"{TablesRivals.RIVALS}!inner(*)"
 
@@ -1652,6 +1898,21 @@ class DatabaseHandler:
             return None
 
     async def _fetch_rivals_history(self, user_a: str, user_b: str) -> list:
+        """|coro|
+        Fetches the complete challenge history between two users.
+
+        Parameters
+        -----------
+        user_a : :class:`str`
+            The first user's osu! username.
+        user_b : :class:`str`
+            The second user's osu! username.
+
+        Returns
+        -----------
+        :class:`list`
+            A list of historical challenge records.
+        """
         query_and1 = f"and({RivalsColumn.CHALLENGER}.eq.{user_a}, {RivalsColumn.CHALLENGED}.eq.{user_b})"
         query_and2 = f"and({RivalsColumn.CHALLENGER}.eq.{user_b}, {RivalsColumn.CHALLENGED}.eq.{user_a})"
 
@@ -1665,6 +1926,19 @@ class DatabaseHandler:
         return response.data if response else []
 
     def _validate_challenge_rules(self, history: list):
+        """
+        Validates whether a new challenge can be created based on match history.
+
+        Parameters
+        -----------
+        history : :class:`list`
+            A list of past matches between two players.
+
+        Returns
+        -----------
+        :class:`ChallengeFailed`
+            The status of eligibility (GOOD if eligible).
+        """
         cutoff_time = datetime.datetime.now(datetime.UTC) - datetime.timedelta(hours=24)
 
         for match in history:
@@ -1692,6 +1966,29 @@ class DatabaseHandler:
         challenger_ouname: str,
         challenged_ouname: str,
     ):
+        """|coro|
+        Logs challenge details to the respective challenger and challenged tables.
+
+        Internal calls: :meth:`supabase_client.rpc`
+
+        Parameters
+        -----------
+        challenge_id : :class:`str`
+            The unique identifier of the challenge.
+        challenger : :class:`discord.Member`
+            The Discord member object of the challenger.
+        challenged : :class:`discord.Member`
+            The Discord member object of the challenged user.
+        challenger_ouname : :class:`str`
+            The osu! username of the challenger.
+        challenged_ouname : :class:`str`
+            The osu! username of the challenged user.
+
+        Returns
+        -----------
+        :class:`bool`
+            True if logging was successful, False otherwise.
+        """
         challenger_duname = challenger.name
         challenged_duname = challenged.name
 
@@ -1735,6 +2032,14 @@ class DatabaseHandler:
             return False
 
     async def _fetch_mismatched_rows(self) -> list[dict[str, Any]] | None:
+        """|coro|
+        Retrieves users whose current PP no longer matches their assigned league.
+
+        Returns
+        -----------
+        :class:`list`[:class:`dict`[:class:`str`, :class:`Any`]] | None
+            A list of mismatched user records, or None on error.
+        """
         try:
             response = await self.supabase_client.rpc(
                 "get_mismatched_rows", {}
@@ -1753,6 +2058,19 @@ class DatabaseHandler:
     async def _process_single_transfer(
         self, data: dict[str, Any]
     ) -> dict[str, Any] | None:
+        """|coro|
+        Executes a league transfer for a single user.
+
+        Parameters
+        -----------
+        data : :class:`dict`[:class:`str`, :class:`Any`]
+            The user's record containing transfer details.
+
+        Returns
+        -----------
+        :class:`dict`[:class:`str`, :class:`Any`] | None
+            The transfer result if successful, otherwise None.
+        """
         uname = data[DiscordOsuColumn.DISCORD_USERNAME]
         league = data[DiscordOsuColumn.LEAGUE]
         future_league = data[DiscordOsuColumn.FUTURE_LEAGUE]
@@ -1782,6 +2100,21 @@ class DatabaseHandler:
     async def _insert_into_new_league(
         self, data: dict[str, Any], future_league: str
     ) -> bool:
+        """|coro|
+        Inserts a user's record into their new league table during a transfer.
+
+        Parameters
+        -----------
+        data : :class:`dict`[:class:`str`, :class:`Any`]
+            The user's current record.
+        future_league : :class:`str`
+            The name of the destination league table.
+
+        Returns
+        -----------
+        :class:`bool`
+            True if the insertion was successful, False otherwise.
+        """
         payload = {
             LeagueColumn.DISCORD_USERNAME: data[DiscordOsuColumn.DISCORD_USERNAME],
             LeagueColumn.OSU_USERNAME: data[DiscordOsuColumn.OSU_USERNAME],
@@ -1804,6 +2137,21 @@ class DatabaseHandler:
             return False
 
     async def _delete_from_old_league(self, discord_id: str, league: str) -> bool:
+        """|coro|
+        Removes a user's record from their previous league table during a transfer.
+
+        Parameters
+        -----------
+        discord_id : :class:`str`
+            The user's Discord ID.
+        league : :class:`str`
+            The name of the source league table.
+
+        Returns
+        -----------
+        :class:`bool`
+            True if the deletion was successful, False otherwise.
+        """
         try:
             await (
                 self.supabase_client.table(league)
@@ -1823,6 +2171,23 @@ class DatabaseHandler:
     async def _update_discord_osu_ref(
         self, old_league: str, future_league: str, discord_id: int
     ) -> bool:
+        """|coro|
+        Updates the league reference in the main discord_osu table for a transferred user.
+
+        Parameters
+        -----------
+        old_league : :class:`str`
+            The name of the previous league.
+        future_league : :class:`str`
+            The name of the new league.
+        discord_id : :class:`int`
+            The user's Discord ID.
+
+        Returns
+        -----------
+        :class:`bool`
+            True if the update was successful, False otherwise.
+        """
         try:
             await (
                 self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
@@ -1842,21 +2207,39 @@ class DatabaseHandler:
     async def _get_player_from_league(
         self, league_table: str, discord_id: int, osu_username: str
     ) -> dict[str, Any] | FuncStatus:
+        """|coro|
+        Retrieves a user's specific data from a league table.
+
+        Parameters
+        -----------
+        league_table : :class:`str`
+            The name of the league table.
+        discord_id : :class:`int`
+            The user's Discord ID.
+        osu_username : :class:`str`
+            The user's osu! username.
+
+        Returns
+        -----------
+        :class:`dict`[:class:`str`, :class:`Any`] | :class:`FuncStatus`
+            The user's league-specific data, or FuncStatus.ERROR if not found.
+        """
+        query_selector = [
+            LeagueColumn.INITIAL_PP,
+            LeagueColumn.PP_CHANGE,
+            LeagueColumn.II,
+        ]
         try:
             response = (
                 await self.supabase_client.table(league_table)
-                .select(LeagueColumn.INITIAL_PP)
+                .select(", ".join(query_selector))
                 .eq(LeagueColumn.DISCORD_ID, discord_id)
                 .maybe_single()
                 .execute()
             )
 
             if response and response.data:
-                return {
-                    LeagueColumn.OSU_USERNAME: osu_username,
-                    LeagueColumn.INITIAL_PP: response.data[LeagueColumn.INITIAL_PP],
-                    DiscordOsuColumn.LEAGUE: league_table,
-                }
+                return response.data
 
             raise Exception(
                 f"Data Integrity Error: User <@{discord_id}> exists in 'discord_osu' "
@@ -1870,6 +2253,14 @@ class DatabaseHandler:
             return FuncStatus.ERROR
 
     async def add_new_season(self) -> int | FuncStatus:
+        """|coro|
+        Increments the season count and creates a new ongoing season entry in the database.
+
+        Returns
+        -----------
+        :class:`int` | :class:`FuncStatus`
+            The new season number if successful, otherwise FuncStatus.ERROR.
+        """
         last_seasons = await self.get_archived_season()
         last_season = max(last_seasons)
         current_season = last_season + 1

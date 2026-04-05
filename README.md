@@ -18,7 +18,8 @@ Right now, the web component is just a microservice for OAuth and is entirely AI
 
 - Made `/show` command only partially functional during off-season.
 - `/season_restart` refactored into two commands `/season_start` and `season_end`
-- partially complete documentation of `utils_v2/db_handler.py`.
+- Added `/profile` command to view detailed player statistics.
+- Full documentation of `utils_v2/db_handler.py`.
 
 ---
 
@@ -45,7 +46,6 @@ Right now, the web component is just a microservice for OAuth and is entirely AI
 ## TODO
 
 - Refactor the `supabase.py` cronjob (and rename it) to better align with the rest of the project's architecture.
-- Complete documentation (specifically for `utils_v2/db_handler.py`).
 
 ---
 
@@ -54,6 +54,7 @@ Right now, the web component is just a microservice for OAuth and is entirely AI
 - **osu! Account Linking** – Secure OAuth2-based account verification via website.
 - **League System** – Automatically assigns users into leagues (Bronze → Master) based on osu! rank.
 - **Rivalry & Challenge System** – Issue & manage direct 1v1 challenges with real-time updates.
+- **Player Profiles** – View detailed seasonal stats, rankings, and win-loss records.
 - **Live PP & Rank Updates** – Every player’s rank & pp is updated constantly in the database.
 - **Session Start/End** – Admins can start/end sessions to reassign league brackets.
 - **Archived Seasons & Challenges** – Access previous seasons and completed rivalries via `/archived` command.
@@ -134,6 +135,19 @@ Revoke a pending challenge you issued.
 
 Example:  
 `/revoke_challenge player:@Rhythmic_Ocean`
+
+---
+
+### `/profile @user`
+
+Get a player's osu!arena profile.
+
+- Shows current league, ranking, and PP change.
+- Displays seasonal and universal points rankings.
+- Includes win-loss record from the rivalry system.
+
+Example:  
+`/profile player:@Rhythmic_Ocean`
 
 ---
 

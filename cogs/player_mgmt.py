@@ -6,11 +6,14 @@ from discord import app_commands
 import secrets
 import time
 
+from discord.webhook.async_ import interaction_message_response_params
 from itsdangerous import URLSafeSerializer
 
 from load_env import ENV
+from utils_v2.enums import TableAll
+from utils_v2 import Renderer
 from utils_v2.enums.status import FuncStatus
-from utils_v2.enums.tables_internals import RivalsColumn
+from utils_v2.enums.tables_internals import DiscordOsuColumn, LeagueColumn, RivalsColumn
 
 if TYPE_CHECKING:
     from bot import OsuArena
@@ -23,6 +26,7 @@ class PlayerManagement(commands.Cog):
         self.log_handler = self.bot.log_handler
         self.osu_auth = self.bot.osu_auth
         self.serializer = URLSafeSerializer(ENV.SEC_KEY)
+        self.renderer = Renderer(self.bot)
 
     @app_commands.command(name="help", description="Shows all available commands")
     async def help(self, interaction: discord.Interaction):
@@ -79,6 +83,13 @@ class PlayerManagement(commands.Cog):
             value="Revoke a pending challenge you issued.\n"
             "- Only **unaccepted (pending)** challenges can be revoked.\n"
             "Example: `/revoke_challenge player:@Rhythmic_Ocean`",
+            inline=False,
+        )
+
+        embed.add_field(
+            name="👤 /profile @user",
+            value="Get a player's osu!arena profile.\n"
+            "Shows league stats, rank, win/loss record, and more.",
             inline=False,
         )
 
@@ -190,6 +201,33 @@ class PlayerManagement(commands.Cog):
         await interaction.followup.send(
             f"⚠️{total_revoked_challenges}/{len(challenges)} challenges revoked."
         )
+
+    @app_commands.command(
+        name="profile", description="Get a player's osu!arena profile."
+    )
+    @app_commands.describe(player="Show player's profile")
+    async def profile(self, interaction: discord.Interaction, player: discord.Member):
+        await interaction.response.defer()
+
+        player_info = await self.db_handler.get_player(discord_id=player.id)
+
+        if player_info == FuncStatus.ERROR:
+            await interaction.followup.send(
+                "❌ An unexpected error occurred.", ephemeral=True
+            )
+            return
+
+        if player_info is None:
+            await interaction.followup.send(
+                f"⚠️ No existing player as <@{player.id}> in the database. Please report if this does not sound right!"
+            )
+            return
+
+        osu_uname = player_info[DiscordOsuColumn.OSU_USERNAME]
+        win_loss = await self.db_handler.get_win_loss(osu_uname)
+
+        embed = await self.renderer.profile.render(player_info, win_loss)
+        await interaction.followup.send(embed=embed)
 
     async def revoke_challenge(
         self, interaction: discord.Interaction, challenge: dict[str, Any]
