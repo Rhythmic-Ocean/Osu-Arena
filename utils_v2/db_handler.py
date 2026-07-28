@@ -369,7 +369,7 @@ class DatabaseHandler:
             )
             return [], []
 
-        return await self._fetch_league_data(league)
+        return await self._fetch_league_data(league, 15)
 
     async def get_archived_league_table(
         self, league: str, season: int
@@ -396,7 +396,7 @@ class DatabaseHandler:
             Returns ``([], [])`` if the table does not exist.
         """
         table_name = f"{league}_{season}"
-        return await self._fetch_league_data(table_name)
+        return await self._fetch_league_data(table_name, 15)
 
     async def get_rivals_table(self, status: str) -> tuple[list[str], list[tuple[Any]]]:
         """|coro|
@@ -1819,7 +1819,7 @@ class DatabaseHandler:
         return headers, rows
 
     async def _fetch_league_data(
-        self, table_name: str
+        self, table_name: str, lim: int
     ) -> tuple[list[str], list[tuple[Any]]]:
         """|coro|
         Fetches league-specific data from the database.
@@ -1849,6 +1849,7 @@ class DatabaseHandler:
                 await self.supabase_client.table(table_name)
                 .select(query_selector)
                 .order(LeagueColumn.PP_CHANGE, desc=True)
+                .limit(lim)
                 .execute()
             )
             if response and response.data:
