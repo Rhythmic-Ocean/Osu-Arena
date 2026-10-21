@@ -24,10 +24,15 @@ class Points(commands.Cog):
     @app_commands.describe(
         player="intended player whose points are to be modified",
         points="Amount to add (use negative numbers to remove)",
+        reason="State in few words the reason for this action",
     )
     @app_commands.checks.has_any_role(ENV.REQ_ROLE, ENV.REQ_ROLE_POINTS)
     async def points(
-        self, interaction: discord.Interaction, player: discord.Member, points: int
+        self,
+        interaction: discord.Interaction,
+        player: discord.Member,
+        points: int,
+        reason: str,
     ):
         await interaction.response.defer()
         if await self.db_handler.get_current_season() is None:
@@ -49,8 +54,10 @@ class Points(commands.Cog):
                 "An internal database error has occured. Error logged. Please report!"
             )
             return
-
-        response2 = await self.db_handler.add_points(points, discord_id=player.id)
+        message1 = f'<@{interaction.user.id}> added {points} to player <@{player.id}>.\n Justification stated: "{reason}"'
+        response2 = await self.db_handler.add_points(
+            points, reason=message1, discord_id=player.id
+        )
 
         if response2:
             new_seasonal_points = response2.get("new_seasonal_points")

@@ -199,6 +199,7 @@ class DatabaseHandler:
         query_selector = [
             DiscordOsuColumn.DISCORD_ID,
             DiscordOsuColumn.OSU_USERNAME,
+            DiscordOsuColumn.TOP_PLAY_MAP,
             DiscordOsuColumn.OSU_ID,
             DiscordOsuColumn.TOP_PLAY_ID,
             DiscordOsuColumn.TOP_PLAY_PP,
@@ -465,7 +466,7 @@ class DatabaseHandler:
             return [], []
 
     async def add_points(
-        self, points: int, discord_id: int = None, osu_uname=None
+        self, points: int, reason: str, discord_id: int = None, osu_uname=None
     ) -> dict | bool:
         """|coro|
         Adds points to a user's account via a database RPC function (`add_points`)
@@ -493,8 +494,11 @@ class DatabaseHandler:
         # While 'osu_username' is synchronized regularly, 'discord_id' is immutable
         # and provides a more robust identifier. This would also remove the need
         # for the intermediate username lookup in this function.
+
         if discord_id:
             osu_uname = await self.get_username(discord_id)
+        if osu_uname:
+            discord_id = await self.get_discord_id(osu_uname)
         try:
             response = (
                 await self.supabase_client.rpc(
@@ -502,6 +506,9 @@ class DatabaseHandler:
                 )
                 .single()
                 .execute()
+            )
+            await self.log_handler.report_points(
+                f"Added {points} points for player <@{discord_id}>.\n\n {reason}\n"
             )
             if response and response.data:
                 return response.data

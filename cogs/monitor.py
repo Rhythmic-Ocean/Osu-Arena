@@ -267,11 +267,15 @@ class Monitor(commands.Cog, name="monitor"):
                     prev_top_pp = play[DiscordOsuColumn.PREV_TOP_PP]
                     top_play_pp = play[DiscordOsuColumn.TOP_PLAY_PP]
                     current_league = play[DiscordOsuColumn.LEAGUE]
+                    top_play_map = play[DiscordOsuColumn.TOP_PLAY_MAP]
                     points_earned = int(
                         self.calcuate_points(prev_top_pp, top_play_pp, current_league)
                     )
+                    message = f"{points_earned} awarded for new top play on map {top_play_map}.\n Top play id: {top_play_id}\n"
                     if (
-                        await self.db_handler.add_points(points_earned, discord_id)
+                        await self.db_handler.add_points(
+                            points_earned, message, discord_id
+                        )
                         is False
                     ):
                         error = Exception(
@@ -557,9 +561,15 @@ class Monitor(commands.Cog, name="monitor"):
 
     async def challenge_finish_point_distribution(self, winner, loser, for_pp):
         try:
-            response1 = await self.db_handler.add_points(for_pp, osu_uname=winner)
+            winner_id = self.db_handler.get_discord_id(winner)
+            loser_id = self.db_handler.get_discord_id(loser)
+            message1 = f"{for_pp} awarded to winner {winner_id} for challenge {winner_id} vs {loser_id}!\n"
+            message2 = f"{for_pp / 2} taken from loser {loser_id} for challenge {winner_id} vs {loser_id}!\n"
+            response1 = await self.db_handler.add_points(
+                for_pp, reason=message1, osu_uname=winner
+            )
             response2 = await self.db_handler.add_points(
-                -int(round(for_pp / 2)), osu_uname=loser
+                -int(round(for_pp / 2)), reasone=message2, osu_uname=loser
             )
             if response1 and response2:
                 return True
@@ -633,6 +643,8 @@ class Monitor(commands.Cog, name="monitor"):
         return True
 
     def calcuate_points(self, prev_top_pp, current_top_pp, league):
+        if prev_top_pp > current_top_pp:
+            return 0
         diff = 5 * (current_top_pp - prev_top_pp)
         match league:
             case TablesLeagues.NOVICE:

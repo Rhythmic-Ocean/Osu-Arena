@@ -49,3 +49,5 @@ class ENV:
     WELCOME_CHANNEL_ID = int(os.getenv("WELCOME_CHANNEL_ID"))
     SIGN_UP_ID = int(os.getenv("SIGN_UP_ID"))
     RHYTHMIC_OCEAN_ID = int(os.getenv("RHYTHMIC_OCEAN_ID"))
+
+    POINTS_WEBHOOK = os.getenv("POINTS_WEBHOOK")

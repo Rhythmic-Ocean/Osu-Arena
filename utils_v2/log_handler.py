@@ -43,6 +43,7 @@ class LogHandler:
         self.logger.setLevel(logging.DEBUG)
         self._setup_handlers()
         self.webhook_url = ENV.LOGS_WEBHOOK
+        self.points_url = ENV.POINTS_WEBHOOK
 
     def _setup_handlers(self) -> None:
         # cuz we don't wanna clear logger for quart one
@@ -136,3 +137,33 @@ class LogHandler:
             else:
                 embed.description = message
                 await webhook.send(embed=embed, username="OsuArena Info")
+
+    async def report_points(self, message: str, title: str = "ℹ️ Player Point Info"):
+        if hasattr(self, "logger"):
+            self.logger.info(f"{title}: {message}")
+        else:
+            print(f"{title}: {message}")
+
+        if not self.points_url:
+            return
+
+        async with aiohttp.ClientSession() as session:
+            webhook = discord.Webhook.from_url(self.points_url, session=session)
+
+            embed = discord.Embed(
+                title=title,
+                color=discord.Color.blue(),
+                timestamp=datetime.datetime.now(datetime.timezone.utc),
+            )
+
+            if len(message) > 4000:
+                embed.description = "Message too long to display. See attached file."
+                with io.BytesIO(message.encode()) as f:
+                    await webhook.send(
+                        embed=embed,
+                        file=discord.File(f, filename="point_log.txt"),
+                        username="Points Overloard",
+                    )
+            else:
+                embed.description = message
+                await webhook.send(embed=embed, username="Points Overloard")
