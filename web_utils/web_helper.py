@@ -7,6 +7,7 @@ import sys
 
 from osu import (
     AsynchronousClient,
+    GameModeStr,
     RequestException,
     UserScoreType,
     SoloScore,
@@ -59,7 +60,7 @@ class WebHelper:
         if osu_id:
             try:
                 top_scores = await self.osu_client.get_user_scores(
-                    osu_id, UserScoreType.BEST, limit=1
+                    osu_id, UserScoreType.BEST, limit=1, mode=GameModeStr.STANDARD
                 )
                 for score in top_scores:
                     if isinstance(score, SoloScore):
