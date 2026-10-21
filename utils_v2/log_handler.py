@@ -162,8 +162,8 @@ class LogHandler:
                     await webhook.send(
                         embed=embed,
                         file=discord.File(f, filename="point_log.txt"),
-                        username="Points Overloard",
+                        username="Points Overlord",
                     )
             else:
                 embed.description = message
-                await webhook.send(embed=embed, username="Points Overloard")
+                await webhook.send(embed=embed, username="Points Overlord")
