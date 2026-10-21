@@ -120,6 +120,11 @@ class Monitor(commands.Cog, name="monitor"):
                         f"> **Seasonal Points:** {seasonal_points}"
                     )
 
+                    message1 = {
+                        f"Awarded 100 points to player <@{discord_id}>\n"
+                        f"Weekly Winner from {a_league}\n"
+                    }
+                    await self.log_handler.report_points(message1)
                     try:
                         await channel.send(content=message)
                     except Exception as error:
