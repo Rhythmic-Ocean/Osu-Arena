@@ -63,7 +63,10 @@ class Renderer(BaseRenderer):
 
 class ProfileRenderer(BaseRenderer):
     async def render(
-        self, player_data: dict[str, Any], win_loss: dict[str, int]
+        self,
+        player_data: dict[str, Any],
+        win_loss: dict[str, int],
+        guild: discord.Guild | None,
     ) -> discord.Embed:
         from utils_v2.enums.tables_internals import DiscordOsuColumn, LeagueColumn
 
@@ -85,9 +88,13 @@ class ProfileRenderer(BaseRenderer):
         losses = win_loss.get("losses", 0)
         total_games = wins + losses
         win_rate = (wins / total_games * 100) if total_games > 0 else 0
+        emoji = (
+            discord.utils.get(guild.emojis, name=league.casefold()) if guild else None
+        )
+        emoji = str(emoji) if emoji else "🥉"
 
         embed = discord.Embed(
-            title=f"<:{league.casefold()}:EMOJI_ID> osu!Arena Profile: {osu_username}",
+            title=f"{emoji} osu!Arena Profile: {osu_username}",
             color=self.MAIN_COLOR,
         )
 

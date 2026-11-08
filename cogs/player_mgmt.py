@@ -2,7 +2,7 @@ from __future__ import annotations
 import discord
 from discord.ext import commands
 from typing import TYPE_CHECKING, Any
-from discord import app_commands
+from discord import app_commands, guild
 import secrets
 import time
 
@@ -226,7 +226,9 @@ class PlayerManagement(commands.Cog):
         osu_uname = player_info[DiscordOsuColumn.OSU_USERNAME]
         win_loss = await self.db_handler.get_win_loss(osu_uname)
 
-        embed = await self.renderer.profile.render(player_info, win_loss)
+        embed = await self.renderer.profile.render(
+            player_info, win_loss, interaction.guild
+        )
         await interaction.followup.send(embed=embed)
 
     async def revoke_challenge(
