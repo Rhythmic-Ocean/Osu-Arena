@@ -87,7 +87,7 @@ class ProfileRenderer(BaseRenderer):
         win_rate = (wins / total_games * 100) if total_games > 0 else 0
 
         embed = discord.Embed(
-            title=f"<:{league.casefold}:EMOJI_ID> osu!Arena Profile: {osu_username}",
+            title=f"<:{league.casefold()}:EMOJI_ID> osu!Arena Profile: {osu_username}",
             color=self.MAIN_COLOR,
         )
 
