@@ -7,6 +7,7 @@ from quart import Quart
 from supabase import create_async_client, AsyncClient
 from osu import AsynchronousClient, GameModeStr, UserScoreType, SoloScore
 import osu
+from load_env import ENV
 
 LEAGUE_MODES = {
     1000: "master",
@@ -23,7 +24,6 @@ BASE_DIR = Path(__file__).resolve().parent
 dotenv_path = BASE_DIR / "local.env"
 load_dotenv(dotenv_path=dotenv_path)
 
-from load_env import ENV
 
 app = Quart(__name__)
 update_lock = asyncio.Lock()
@@ -111,6 +111,7 @@ async def update_player_stats(user_record):
     osu_id = user_record.get("osu_id")
     current_top_play_id = user_record.get("top_play_id")
     current_top_play_pp = user_record.get("top_play_pp")
+    current_top_play_title = user_record.get("top_play_map")
     current_pp = user_record.get("current_pp")
     current_ii = user_record.get("ii", 0)
 
@@ -147,6 +148,10 @@ async def update_player_stats(user_record):
 
     if top_play_data:
         title, date, p_points, score_id = top_play_data
+        top_play_pp = int(p_points) if p_points else 0
+        # NOTE: pp rework edge case
+        if current_top_play_pp != top_play_pp and score_id == current_top_play_id:
+            updates["top_play_pp"] = top_play_pp
         if score_id != current_top_play_id:
             formatted_date = date.isoformat() if date else None
             updates.update(
@@ -160,6 +165,10 @@ async def update_player_stats(user_record):
             )
             if current_top_play_id is not None:
                 updates["top_play_announce"] = True
+
+            if current_top_play_title == title:
+                updates["same_map_top_play"] = True
+                logs.append(f"Same map for {osu_id}, same_map_top_play set as True")
 
             logs.append(f"Updated for {osu_id}, with {title}  {p_points}")
         else:
@@ -185,7 +194,7 @@ async def update_player_stats(user_record):
 async def run_update_process():
     response = (
         await supabase.table("discord_osu")
-        .select("osu_id, top_play_id, top_play_pp, current_pp, ii")
+        .select("osu_id, top_play_id, top_play_map, top_play_pp, current_pp, ii")
         .execute()
     )
 

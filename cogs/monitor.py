@@ -273,9 +273,25 @@ class Monitor(commands.Cog, name="monitor"):
                     top_play_pp = play[DiscordOsuColumn.TOP_PLAY_PP]
                     current_league = play[DiscordOsuColumn.LEAGUE]
                     top_play_map = play[DiscordOsuColumn.TOP_PLAY_MAP]
+                    same_map_top_play = play[DiscordOsuColumn.SAME_MAP_TOP_PLAY]
                     points_earned = int(
                         self.calcuate_points(prev_top_pp, top_play_pp, current_league)
                     )
+                    if same_map_top_play:
+                        prev_earned_points = play[
+                            DiscordOsuColumn.POINTS_EARNED_FROM_TOP_PLAY
+                        ]
+                        await self.db_handler.document_points_earned(
+                            prev_earned_points + points_earned, discord_id
+                        )
+                        await self.log_handler.report_info(
+                            f"Same map top play detected for player <@{discord_id}>.\n Points earned: {points_earned}, Points recorded: {points_earned + prev_earned_points}"
+                        )
+                    else:
+                        await self.db_handler.document_points_earned(
+                            points_earned, discord_id
+                        )
+
                     message = f"{points_earned} awarded for new top play on map {top_play_map}.\n Top play id: {top_play_id}\n"
                     if (
                         await self.db_handler.add_points(

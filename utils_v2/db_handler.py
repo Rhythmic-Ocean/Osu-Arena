@@ -205,6 +205,8 @@ class DatabaseHandler:
             DiscordOsuColumn.TOP_PLAY_PP,
             DiscordOsuColumn.PREV_TOP_PP,
             DiscordOsuColumn.LEAGUE,
+            DiscordOsuColumn.SAME_MAP_TOP_PLAY,
+            DiscordOsuColumn.POINTS_EARNED_FROM_TOP_PLAY,
         ]
         try:
             response = (
@@ -2290,3 +2292,25 @@ class DatabaseHandler:
                 "DatabaseHandler.add_new_season()", error
             )
             return FuncStatus.ERROR
+
+    async def document_points_earned(self, points: int, discord_id: int):
+        try:
+            await (
+                self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                .update(
+                    {
+                        DiscordOsuColumn.POINTS_EARNED_FROM_TOP_PLAY: points,
+                        DiscordOsuColumn.same_map_top_play: False,
+                    }
+                )
+                .eq(DiscordOsuColumn.DISCORD_ID, discord_id)
+                .execute()
+            )
+            return True
+        except Exception as e:
+            await self.log_handler.report_error(
+                "DatabaseHandler.negate_new_player_announce()",
+                e,
+                f"Failed to negate new player for <@{discord_id}>",
+            )
+            return False

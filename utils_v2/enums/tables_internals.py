@@ -46,6 +46,8 @@ class DiscordOsuColumn(StrEnum):
     POINTS = "points"
     SEASONAL_POINTS = "seasonal_points"
     PREV_TOP_PP = "prev_top_pp"
+    POINTS_EARNED_FROM_TOP_PLAY = "points_earned_from_top_play"
+    SAME_MAP_TOP_PLAY = "same_map_top_play"
 
 
 class DiscordOsuData(TypedDict):
