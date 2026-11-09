@@ -2300,7 +2300,7 @@ class DatabaseHandler:
                 .update(
                     {
                         DiscordOsuColumn.POINTS_EARNED_FROM_TOP_PLAY: points,
-                        DiscordOsuColumn.same_map_top_play: False,
+                        DiscordOsuColumn.SAME_MAP_TOP_PLAY: False,
                     }
                 )
                 .eq(DiscordOsuColumn.DISCORD_ID, discord_id)
@@ -2309,8 +2309,8 @@ class DatabaseHandler:
             return True
         except Exception as e:
             await self.log_handler.report_error(
-                "DatabaseHandler.negate_new_player_announce()",
+                "DatabaseHandler.document_points_earned()",
                 e,
-                f"Failed to negate new player for <@{discord_id}>",
+                f"Failed to negate SAME_MAP_TOP_PLAY for <@{discord_id}>",
             )
             return False
