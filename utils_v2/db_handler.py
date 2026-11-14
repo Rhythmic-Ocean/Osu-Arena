@@ -4,7 +4,6 @@ Common class for both the website and the bot for database access
 """
 
 from __future__ import annotations
-import datetime
 from typing import Any
 import discord
 from supabase import AsyncClient
@@ -12,6 +11,7 @@ from supabase import AsyncClient
 from utils_v2.enums.status import FuncStatus
 from utils_v2.enums.tables import TablesLeagues
 from utils_v2.log_handler import LogHandler
+from datetime import datetime
 
 from .enums import (
     HistoricalPointsColumn,
@@ -459,7 +459,7 @@ class DatabaseHandler:
                 .execute()
             )
             if response and response.data:
-                return await self._arrange_table(response.data)
+                return self._arrange_table(response.data)
             return [], []
         except Exception as error:
             await self.log_handler.report_error(
@@ -604,7 +604,7 @@ class DatabaseHandler:
                 .execute()
             )
             if response.data:
-                return await self._arrange_table(response.data)
+                return self._arrange_table(response.data)
             return [], []
         except Exception as error:
             await self.log_handler.report_error(
@@ -1805,7 +1805,7 @@ class DatabaseHandler:
             .execute()
         )
 
-    async def _arrange_table(
+    def _arrange_table(
         self, data: list[dict[str, Any]]
     ) -> tuple[list[str], list[tuple[Any]]]:
         """|coro|
@@ -1862,7 +1862,7 @@ class DatabaseHandler:
                 .execute()
             )
             if response and response.data:
-                return await self._arrange_table(response.data)
+                return self._arrange_table(response.data)
         except Exception as error:
             await self.log_handler.report_error(
                 f"DatabaseHandler._fetch_league_data({table_name})", error
@@ -2294,6 +2294,21 @@ class DatabaseHandler:
             return FuncStatus.ERROR
 
     async def document_points_earned(self, points: int, discord_id: int):
+        """|coro|
+        Documenting how many points was provided to a certain player after their top play by discord_id`
+
+        Parameters
+        -----------
+        points: :class:`int`
+            Ponts awarded
+        discord_id : :class:`int`
+            The user's Discord ID.
+
+        Returns
+        -----------
+        :class:`bool`
+            True on success False otherwise
+        """
         try:
             await (
                 self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
@@ -2314,3 +2329,56 @@ class DatabaseHandler:
                 f"Failed to negate SAME_MAP_TOP_PLAY for <@{discord_id}>",
             )
             return False
+
+    async def get_top_plays_by(
+        self, by: str, date: str
+    ) -> tuple[list[str], list[tuple[Any]]] | None:
+        """|coro|
+        Returning top plays after a cutoff date by certain metric (pp or points)
+
+        Parameters
+        -----------
+        by: :class:`str`
+            Metric to sort by (pp or points)
+        date: :class:'str'
+            Date after cutoff in str
+
+
+        Returns
+        -----------
+        list[dict[str, Any]] | None
+            A list of user records containing their top play data
+        """
+        query_selector = [
+            DiscordOsuColumn.OSU_USERNAME,
+            DiscordOsuColumn.TOP_PLAY_ID,
+            DiscordOsuColumn.TOP_PLAY_MAP,
+            DiscordOsuColumn.TOP_PLAY_PP,
+            DiscordOsuColumn.POINTS_EARNED_FROM_TOP_PLAY,
+            DiscordOsuColumn.TOP_PLAY_DATE,
+            DiscordOsuColumn.TOP_PLAY_DATE,
+        ]
+        query_order = DiscordOsuColumn.POINTS_EARNED_FROM_TOP_PLAY
+        if by == "pp":
+            query_order = DiscordOsuColumn.TOP_PLAY_ID
+        try:
+            response = (
+                await self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                .select(", ".join(query_selector))
+                .gt(DiscordOsuColumn.TOP_PLAY_DATE, date)
+                .order(query_order, desc=True)
+                .limit(15)
+                .execute()
+            )
+            if response.data:
+                display_data = [row.copy() for row in response.data]
+                for row in display_data:
+                    if row.get("top_play_date"):
+                        played_at = datetime.fromisoformat(row["top_play_date"])
+                        row["top_play_date"] = played_at.strftime("%b %d, %Y")
+                return self._arrange_table(display_data)
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler.get_top_plays_by", error
+            )
+            return None

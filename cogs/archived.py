@@ -29,7 +29,7 @@ class Archives(commands.Cog):
 
             if not rows:
                 await interaction.followup.send(
-                    "📂 **No Data Found:** This table is empty or the archive does not exist."
+                    "📂 **No Data Found:** This table is empty or the archive does not exist.\n Please report if it doesn't sound right."
                 )
                 return
 

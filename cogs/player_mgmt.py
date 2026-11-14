@@ -1,19 +1,18 @@
 from __future__ import annotations
+from zoneinfo import ZoneInfo
+from datetime import date as Date, datetime, time
 import discord
 from discord.ext import commands
 from typing import TYPE_CHECKING, Any
-from discord import app_commands, guild
+from discord import app_commands
 import secrets
-import time
 
-from discord.webhook.async_ import interaction_message_response_params
 from itsdangerous import URLSafeSerializer
 
 from load_env import ENV
-from utils_v2.enums import TableAll
 from utils_v2 import Renderer
 from utils_v2.enums.status import FuncStatus
-from utils_v2.enums.tables_internals import DiscordOsuColumn, LeagueColumn, RivalsColumn
+from utils_v2.enums.tables_internals import DiscordOsuColumn, RivalsColumn
 
 if TYPE_CHECKING:
     from bot import OsuArena
@@ -231,6 +230,41 @@ class PlayerManagement(commands.Cog):
         )
         await interaction.followup.send(embed=embed)
 
+    @app_commands.command(
+        name="top_plays", description='Get top 10 plays by pp or points after "date".'
+    )
+    @app_commands.describe(by="pp or points")
+    @app_commands.describe(date="the date after in YYYY-MM-DD")
+    async def top_plays(self, interaction: discord.Interaction, by: str, date: str):
+        try:
+            start_date = Date.fromisoformat(date)
+            if start_date.isoformat() != date:
+                raise ValueError
+        except ValueError:
+            await interaction.response.send_message(
+                "Enter a valid date in YYYY-MM-DD format, like 2026-11-14.",
+                ephemeral=True,
+            )
+            return
+        await interaction.response.defer()
+        cutoff = datetime.combine(
+            start_date, time.min, tzinfo=ZoneInfo("America/Chicago")
+        ).isoformat()
+
+        response = await self.db_handler.get_top_plays_by(by, cutoff)
+        if response is None:
+            await interaction.followup.send(
+                "📂 **No Data Found:** This table is empty or the table does not exist.\n Please report if it doesn't sound right."
+            )
+            return
+        headers, rows = response
+        for i, header in enumerate(headers):
+            if header == DiscordOsuColumn.POINTS_EARNED_FROM_TOP_PLAY:
+                headers[i] = "points"
+                title = "Top plays!"
+
+        await self._render_and_send(interaction, headers, rows, title)
+
     async def revoke_challenge(
         self, interaction: discord.Interaction, challenge: dict[str, Any]
     ):
@@ -300,6 +334,21 @@ class PlayerManagement(commands.Cog):
                 f"Failed resetting roles/nick for <@{member.id}>",
             )
             return False
+
+    async def _render_and_send(self, interaction, headers, rows, title):
+        image_buf = await self.renderer.leaderboard.render_image(headers, rows)
+
+        if not image_buf:
+            await interaction.followup.send(
+                "⚠️ **Render Error:** Failed to generate image."
+            )
+            return
+
+        file = discord.File(fp=image_buf, filename="archive_table.png")
+        embed = discord.Embed(title=title, color=discord.Color.blue())
+        embed.set_image(url="attachment://archive_table.png")
+
+        await interaction.followup.send(embed=embed, file=file)
 
     @delete.error
     async def delete_error(self, interaction: discord.Interaction, error):
