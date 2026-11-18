@@ -1,4 +1,5 @@
 from __future__ import annotations
+import time as Time
 from zoneinfo import ZoneInfo
 from datetime import date as Date, datetime, time
 import discord
@@ -123,7 +124,7 @@ class PlayerManagement(commands.Cog):
             "user_id": interaction.user.id,
             "user_name": interaction.user.name,
             "nonce": nonce,
-            "created_at": int(time.time()),
+            "created_at": int(Time.time()),
         }
 
         state = self.serializer.dumps(secret)
