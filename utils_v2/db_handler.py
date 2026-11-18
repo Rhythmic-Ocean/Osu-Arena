@@ -4,6 +4,7 @@ Common class for both the website and the bot for database access
 """
 
 from __future__ import annotations
+import asyncio
 from typing import Any
 import discord
 from supabase import AsyncClient
@@ -2382,3 +2383,57 @@ class DatabaseHandler:
                 "DatabaseHandler.get_top_plays_by", error
             )
             return None
+
+    async def grab_all_players_playtime_data(self) -> list[dict] | None:
+        try:
+            response = (
+                await self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                .select(
+                    f"{DiscordOsuColumn.OSU_ID}, "
+                    f"{DiscordOsuColumn.OSU_USERNAME}, "
+                    f"{DiscordOsuColumn.PLAYTIME}, "
+                    f"{DiscordOsuColumn.POINTS}, "
+                    f"{DiscordOsuColumn.SEASONAL_POINTS}"
+                )
+                .execute()
+            )
+            if response.data:
+                return response.data
+            raise Exception(
+                "Unable to grab player playtime data at DatabaseHandler.grab_all_players_playtime_data"
+            )
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler.grab_all_players_playtime_data", error
+            )
+            return None
+
+    async def bulk_update_playtime_and_points(self, updates: list[dict]) -> bool:
+        if not updates:
+            return True
+
+        semaphore = asyncio.Semaphore(15)
+
+        async def update_one(row: dict) -> None:
+            osu_id = row[DiscordOsuColumn.OSU_ID]
+            payload = {
+                DiscordOsuColumn.PLAYTIME: row[DiscordOsuColumn.PLAYTIME],
+                DiscordOsuColumn.POINTS: row[DiscordOsuColumn.POINTS],
+                DiscordOsuColumn.SEASONAL_POINTS: row[DiscordOsuColumn.SEASONAL_POINTS],
+            }
+            async with semaphore:
+                await (
+                    self.supabase_client.table(TableMiscellaneous.DISCORD_OSU)
+                    .update(payload)
+                    .eq(DiscordOsuColumn.OSU_ID, osu_id)
+                    .execute()
+                )
+
+        try:
+            await asyncio.gather(*(update_one(u) for u in updates))
+            return True
+        except Exception as error:
+            await self.log_handler.report_error(
+                "DatabaseHandler.bulk_update_playtime_and_points", error
+            )
+            return False

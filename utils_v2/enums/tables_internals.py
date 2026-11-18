@@ -48,6 +48,7 @@ class DiscordOsuColumn(StrEnum):
     PREV_TOP_PP = "prev_top_pp"
     POINTS_EARNED_FROM_TOP_PLAY = "points_earned_from_top_play"
     SAME_MAP_TOP_PLAY = "same_map_top_play"
+    PLAYTIME = "playtime"
 
 
 class DiscordOsuData(TypedDict):
@@ -68,6 +69,9 @@ class DiscordOsuData(TypedDict):
     new_player_announce: bool
     points: int
     seasonal_points: int
+    points_earned_from_top_play: int
+    same_map_top_play: bool
+    playtime: int
 
 
 class MiscColumn(StrEnum):

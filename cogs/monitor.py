@@ -4,6 +4,7 @@ from typing import Any, TYPE_CHECKING
 import discord
 import datetime
 from discord.ext import commands, tasks
+from osu import GameModeStr, RequestException
 from supabase import AsyncClient
 from utils_v2 import (
     ChallengeStatus,
@@ -61,6 +62,7 @@ class Monitor(commands.Cog, name="monitor"):
         if naw.weekday() != 0:
             return
 
+        await self.process_playtime_points()
         guild = self.bot.guild
         channel = guild.get_channel(ENV.BOT_UPDATES)
         if await self.db_handler.get_current_season() is None:
@@ -629,6 +631,92 @@ class Monitor(commands.Cog, name="monitor"):
             await self.log_handler.report_error(
                 "Monitor.point_distribution_announcement", error
             )
+
+    async def process_playtime_points(self) -> None:
+        players_data = await self.bot.db_handler.grab_all_players_playtime_data()
+        if not players_data:
+            return
+
+        osu_ids = [row[DiscordOsuColumn.OSU_ID] for row in players_data]
+        current_playtimes = await self.get_players_playtime(osu_ids)
+
+        updates: list[dict] = []
+        point_logs: list[tuple[int, str]] = []
+
+        for row in players_data:
+            osu_id = row[DiscordOsuColumn.OSU_ID]
+
+            if osu_id not in current_playtimes:
+                continue
+
+            username = row.get(DiscordOsuColumn.OSU_USERNAME) or str(osu_id)
+            old_playtime = row.get(DiscordOsuColumn.PLAYTIME) or 0
+            new_playtime = current_playtimes[osu_id]
+
+            current_points = row.get(DiscordOsuColumn.POINTS) or 0
+            current_seasonal = row.get(DiscordOsuColumn.SEASONAL_POINTS) or 0
+
+            if old_playtime > 0 and new_playtime > old_playtime:
+                hours_increased = new_playtime - old_playtime
+                earned_points = hours_increased * 5
+                new_points = current_points + earned_points
+                new_seasonal = current_seasonal + earned_points
+
+                point_logs.append(
+                    (
+                        earned_points,
+                        f"{username} : playtime increased by {hours_increased} hours, points earned {earned_points}",
+                    )
+                )
+            else:
+                new_points = current_points
+                new_seasonal = current_seasonal
+
+            if new_playtime != old_playtime or new_points != current_points:
+                updates.append(
+                    {
+                        DiscordOsuColumn.OSU_ID: osu_id,
+                        DiscordOsuColumn.PLAYTIME: new_playtime,
+                        DiscordOsuColumn.POINTS: new_points,
+                        DiscordOsuColumn.SEASONAL_POINTS: new_seasonal,
+                    }
+                )
+
+        success = await self.bot.db_handler.bulk_update_playtime_and_points(updates)
+
+        if success and point_logs:
+            point_logs.sort(key=lambda entry: entry[0], reverse=True)
+            report_message = "\n".join(line for _, line in point_logs)
+            await self.bot.log_handler.report_points(
+                message=report_message,
+                title="⏱️ Weekly Playtime Points Summary",
+            )
+
+    async def get_players_playtime(
+        self, osu_ids: list[int], mode: GameModeStr = GameModeStr.STANDARD
+    ) -> dict[int, int]:
+        playtimes: dict[int, int] = {}
+        semaphore = asyncio.Semaphore(5)
+
+        async def fetch_one(osu_id: int) -> None:
+            async with semaphore:
+                try:
+                    user = await self.osu_client.get_user(osu_id, mode=mode)
+                    seconds = user.statistics.play_time if user.statistics else 0
+                    playtimes[osu_id] = int(seconds // 3600)
+                except RequestException as error:
+                    if error.status == 404:
+                        return
+                    await self.bot.log_handler.report_error(
+                        f"get_players_playtime ({osu_id})", error
+                    )
+                except Exception as error:
+                    await self.bot.log_handler.report_error(
+                        f"get_players_playtime ({osu_id})", error
+                    )
+
+        await asyncio.gather(*(fetch_one(uid) for uid in osu_ids))
+        return playtimes
 
     async def revoke_challenge(self, challenge: dict[str, Any]):
         challenger = challenge[RivalsColumn.CHALLENGER]
