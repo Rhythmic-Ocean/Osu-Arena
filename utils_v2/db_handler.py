@@ -561,7 +561,7 @@ class DatabaseHandler:
                 .execute()
             )
             if response.data:
-                return await self._arrange_table(response.data)
+                return self._arrange_table(response.data)
             return [], []
 
         except Exception as e:
