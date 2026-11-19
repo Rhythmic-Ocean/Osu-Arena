@@ -7,7 +7,6 @@ from quart import Quart
 from supabase import create_async_client, AsyncClient
 from osu import AsynchronousClient, GameModeStr, UserScoreType, SoloScore
 import osu
-from load_env import ENV
 
 LEAGUE_MODES = {
     1000: "master",
@@ -24,6 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent
 dotenv_path = BASE_DIR / "local.env"
 load_dotenv(dotenv_path=dotenv_path)
 
+from load_env import ENV
 
 app = Quart(__name__)
 update_lock = asyncio.Lock()
@@ -168,7 +168,6 @@ async def update_player_stats(user_record):
 
             if current_top_play_title == title:
                 updates["same_map_top_play"] = True
-                logs.append(f"Same map for {osu_id}, same_map_top_play set as True")
 
             logs.append(f"Updated for {osu_id}, with {title}  {p_points}")
         else:

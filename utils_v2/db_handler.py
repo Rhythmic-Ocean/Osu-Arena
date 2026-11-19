@@ -2351,6 +2351,7 @@ class DatabaseHandler:
             A list of user records containing their top play data
         """
         query_selector = [
+            DiscordOsuColumn.GLOBAL_RANK,
             DiscordOsuColumn.OSU_USERNAME,
             DiscordOsuColumn.TOP_PLAY_ID,
             DiscordOsuColumn.TOP_PLAY_MAP,

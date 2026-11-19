@@ -1,6 +1,7 @@
 *sec.env
 *.env
 *.log
+Session.vim
 
 __pycache__/
 test/
