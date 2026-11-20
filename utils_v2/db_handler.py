@@ -12,7 +12,8 @@ from supabase import AsyncClient
 from utils_v2.enums.status import FuncStatus
 from utils_v2.enums.tables import TablesLeagues
 from utils_v2.log_handler import LogHandler
-from datetime import datetime
+from datetime import datetime as Datetime
+import datetime
 
 from .enums import (
     HistoricalPointsColumn,
@@ -2376,7 +2377,7 @@ class DatabaseHandler:
                 display_data = [row.copy() for row in response.data]
                 for row in display_data:
                     if row.get("top_play_date"):
-                        played_at = datetime.fromisoformat(row["top_play_date"])
+                        played_at = Datetime.fromisoformat(row["top_play_date"])
                         row["top_play_date"] = played_at.strftime("%b %d, %Y")
                 return self._arrange_table(display_data)
         except Exception as error:
